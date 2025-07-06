@@ -11,6 +11,9 @@ function App() {
     // 1. 尝试从 Telegram WebApp 读取用户身份
     const tg = (window as any).Telegram?.WebApp;
     const user = tg?.initDataUnsafe?.user;
+    
+    console.log('[TG] Telegram user:', user);
+    console.log('[TG] user id to check:', user && user.id);
 
     console.log('Telegram WebApp:', tg);
     console.log('Telegram initDataUnsafe:', tg?.initDataUnsafe);
