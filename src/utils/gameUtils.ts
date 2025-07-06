@@ -1,5 +1,6 @@
 import { Cell, Match, SpecialCandy } from '../types/game';
 
+// 工具：颜色变浅
 export function lightenColor(color: string, percent: number): string {
   const num = parseInt(color.replace("#", ""), 16);
   const amt = Math.round(2.55 * percent);
@@ -11,180 +12,153 @@ export function lightenColor(color: string, percent: number): string {
     (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
 }
 
+// 判断两个格子是否同一个
 export function cellsEqual(cell1: Cell, cell2: Cell): boolean {
   return cell1.row === cell2.row && cell1.col === cell2.col;
 }
 
+// 判断是否相邻
 export function areAdjacent(cell1: Cell, cell2: Cell): boolean {
   const rowDiff = Math.abs(cell1.row - cell2.row);
   const colDiff = Math.abs(cell1.col - cell2.col);
   return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
 }
 
+// 坐标转格子
 export function getCellFromPosition(x: number, y: number, cellSize: number, gridSize: number): Cell | null {
   const col = Math.floor(x / cellSize);
   const row = Math.floor(y / cellSize);
-  
   if (row >= 0 && row < gridSize && col >= 0 && col < gridSize) {
     return { row, col };
   }
   return null;
 }
 
+// 用户名脱敏
 export function maskName(username?: string, phone?: string): string {
   if (username) return username.slice(0, 4) + '***';
   if (phone) return phone.slice(0, 4) + '***';
   return '匿名';
 }
 
-// 🎯 SIMPLE BULLETPROOF MATCH DETECTION - NO COMPLEX LOGIC
-export function findSpecialMatches(grid: (number | null)[][], gridSize: number): {
+// ===========================
+// 三消核心逻辑
+// ===========================
+
+export function findSpecialMatches(
+  grid: (number | null)[][],
+  gridSize: number
+): {
   matches: Match[];
   specialCandies: { row: number; col: number; type: 'striped-h' | 'striped-v' | 'wrapped' | 'color-bomb' }[];
 } {
-  console.log('🚀 SIMPLE BULLETPROOF MATCH DETECTION');
-  
-  // Debug: Print current grid
-  console.log('📋 Grid:');
-  for (let row = 0; row < gridSize; row++) {
-    const rowStr = grid[row].map(cell => cell === null ? 'X' : cell.toString()).join(' ');
-    console.log(`  ${row}: ${rowStr}`);
-  }
-
-  const matches: Match[] = [];
+  // 标记所有被消除的位置
+  const matchSet = new Set<string>();
+  // 记录所有特殊糖果
   const specialCandies: { row: number; col: number; type: 'striped-h' | 'striped-v' | 'wrapped' | 'color-bomb' }[] = [];
 
-  // 🔍 HORIZONTAL MATCHES - DEAD SIMPLE
-  console.log('🔍 Checking horizontal matches...');
+  // 横向和纵向连消长度
+  const horRun: number[][] = [];
+  const verRun: number[][] = [];
+  for (let i = 0; i < gridSize; i++) {
+    horRun[i] = Array(gridSize).fill(0);
+    verRun[i] = Array(gridSize).fill(0);
+  }
+
+  // 横向判定
   for (let row = 0; row < gridSize; row++) {
-    for (let col = 0; col <= gridSize - 3; col++) {
-      const color1 = grid[row][col];
-      const color2 = grid[row][col + 1];
-      const color3 = grid[row][col + 2];
-      
-      // Simple check: are all 3 the same and not null?
-      if (color1 !== null && color1 === color2 && color2 === color3) {
-        console.log(`✅ HORIZONTAL: Row ${row}, Cols ${col}-${col+2}, Color ${color1}`);
-        
-        // Count total length of this match
-        let endCol = col + 3;
-        while (endCol < gridSize && grid[row][endCol] === color1) {
-          endCol++;
+    let count = 1;
+    for (let col = 1; col < gridSize; col++) {
+      if (
+        grid[row][col] !== null &&
+        grid[row][col] === grid[row][col - 1]
+      ) {
+        count++;
+      } else {
+        if (count >= 3) {
+          for (let k = 0; k < count; k++) {
+            horRun[row][col - k - 1] = count;
+          }
         }
-        const matchLength = endCol - col;
-        
-        console.log(`  📏 Total length: ${matchLength}`);
-        
-        // Add all cells in this match
-        for (let c = col; c < endCol; c++) {
-          matches.push({ row, col: c });
-          console.log(`    📍 Added (${row},${c})`);
-        }
-        
-        // Create special candy
-        if (matchLength >= 5) {
-          const centerCol = Math.floor((col + endCol - 1) / 2);
-          specialCandies.push({ row, col: centerCol, type: 'color-bomb' });
-          console.log(`    💣 Color bomb at (${row},${centerCol})`);
-        } else if (matchLength === 4) {
-          const centerCol = Math.floor((col + endCol - 1) / 2);
-          specialCandies.push({ row, col: centerCol, type: 'striped-h' });
-          console.log(`    🍬 H-striped at (${row},${centerCol})`);
-        }
-        
-        // Skip past this match
-        col = endCol - 1;
+        count = 1;
+      }
+    }
+    if (count >= 3) {
+      for (let k = 0; k < count; k++) {
+        horRun[row][gridSize - 1 - k] = count;
       }
     }
   }
 
-  // 🔍 VERTICAL MATCHES - DEAD SIMPLE
-  console.log('🔍 Checking vertical matches...');
+  // 纵向判定
   for (let col = 0; col < gridSize; col++) {
-    for (let row = 0; row <= gridSize - 3; row++) {
-      const color1 = grid[row][col];
-      const color2 = grid[row + 1][col];
-      const color3 = grid[row + 2][col];
-      
-      // Simple check: are all 3 the same and not null?
-      if (color1 !== null && color1 === color2 && color2 === color3) {
-        console.log(`✅ VERTICAL: Col ${col}, Rows ${row}-${row+2}, Color ${color1}`);
-        
-        // Count total length of this match
-        let endRow = row + 3;
-        while (endRow < gridSize && grid[endRow][col] === color1) {
-          endRow++;
-        }
-        const matchLength = endRow - row;
-        
-        console.log(`  📏 Total length: ${matchLength}`);
-        
-        // Check if any of these cells are already matched horizontally
-        let hasConflict = false;
-        for (let r = row; r < endRow; r++) {
-          const existing = matches.find(m => m.row === r && m.col === col);
-          if (existing) {
-            console.log(`  ⚠️ Conflict at (${r},${col}) - already in horizontal match`);
-            hasConflict = true;
-            break;
+    let count = 1;
+    for (let row = 1; row < gridSize; row++) {
+      if (
+        grid[row][col] !== null &&
+        grid[row][col] === grid[row - 1][col]
+      ) {
+        count++;
+      } else {
+        if (count >= 3) {
+          for (let k = 0; k < count; k++) {
+            verRun[row - k - 1][col] = count;
           }
         }
-        
-        if (!hasConflict) {
-          // Add all cells in this match
-          for (let r = row; r < endRow; r++) {
-            matches.push({ row: r, col });
-            console.log(`    📍 Added (${r},${col})`);
-          }
-          
-          // Create special candy
-          if (matchLength >= 5) {
-            const centerRow = Math.floor((row + endRow - 1) / 2);
-            specialCandies.push({ row: centerRow, col, type: 'color-bomb' });
-            console.log(`    💣 Color bomb at (${centerRow},${col})`);
-          } else if (matchLength === 4) {
-            const centerRow = Math.floor((row + endRow - 1) / 2);
-            specialCandies.push({ row: centerRow, col, type: 'striped-v' });
-            console.log(`    🍬 V-striped at (${centerRow},${col})`);
-          }
-        }
-        
-        // Skip past this match
-        row = endRow - 1;
+        count = 1;
+      }
+    }
+    if (count >= 3) {
+      for (let k = 0; k < count; k++) {
+        verRun[gridSize - 1 - k][col] = count;
       }
     }
   }
 
-  // 🔍 T/L SHAPES - SIMPLE CHECK
-  console.log('🔍 Checking T/L shapes...');
+  // 标记所有三连及以上格子
   for (let row = 0; row < gridSize; row++) {
     for (let col = 0; col < gridSize; col++) {
-      const centerColor = grid[row][col];
-      if (centerColor === null) continue;
+      if (horRun[row][col] >= 3 || verRun[row][col] >= 3) {
+        matchSet.add(`${row},${col}`);
+      }
+    }
+  }
 
-      // Check if this cell is part of both horizontal and vertical matches
-      const inHorizontal = matches.some(m => m.row === row && m.col === col);
-      const inVertical = matches.some(m => m.row === row && m.col === col);
-      
-      if (inHorizontal && inVertical) {
-        console.log(`🎁 T/L SHAPE at (${row},${col})`);
+  // 生成特殊糖果（条纹、彩球、包裹）
+  for (let row = 0; row < gridSize; row++) {
+    for (let col = 0; col < gridSize; col++) {
+      // 彩球
+      if (horRun[row][col] >= 5 || verRun[row][col] >= 5) {
+        specialCandies.push({ row, col, type: 'color-bomb' });
+        continue;
+      }
+      // 横条纹
+      if (horRun[row][col] === 4) {
+        specialCandies.push({ row, col, type: 'striped-h' });
+      }
+      // 竖条纹
+      if (verRun[row][col] === 4) {
+        specialCandies.push({ row, col, type: 'striped-v' });
+      }
+      // 包裹糖果（T/L型）
+      if (horRun[row][col] >= 3 && verRun[row][col] >= 3) {
         specialCandies.push({ row, col, type: 'wrapped' });
       }
     }
   }
 
-  console.log(`🎯 DETECTION COMPLETE:`);
-  console.log(`  📊 Total matches: ${matches.length}`);
-  console.log(`  🍭 Special candies: ${specialCandies.length}`);
-  
-  // List all matches
-  matches.forEach((match, index) => {
-    const color = grid[match.row][match.col];
-    console.log(`    ${index + 1}: (${match.row},${match.col}) = ${color}`);
+  // 转换成数组返回
+  const matches: Match[] = Array.from(matchSet).map(str => {
+    const [row, col] = str.split(',').map(Number);
+    return { row, col };
   });
 
   return { matches, specialCandies };
 }
+
+// ===========================
+// 特殊糖果激活
+// ===========================
 
 export function activateSpecialCandy(
   grid: (number | null)[][],
@@ -192,46 +166,33 @@ export function activateSpecialCandy(
   row: number,
   col: number,
   gridSize: number,
-  targetColor?: number // For color bomb activation
+  targetColor?: number // 彩球使用
 ): { row: number; col: number }[] {
   const cellsToRemove: { row: number; col: number }[] = [];
   const special = specialCandies[row][col];
 
   if (!special || special.type === 'normal') return cellsToRemove;
 
-  console.log(`🎆 Activating special candy at (${row},${col}):`, special.type);
-
   switch (special.type) {
     case 'striped-h':
-      // Clear entire row
-      console.log('💥 Clearing entire row', row);
       for (let c = 0; c < gridSize; c++) {
         cellsToRemove.push({ row, col: c });
       }
       break;
-
     case 'striped-v':
-      // Clear entire column
-      console.log('💥 Clearing entire column', col);
       for (let r = 0; r < gridSize; r++) {
         cellsToRemove.push({ row: r, col });
       }
       break;
-
     case 'wrapped':
-      // Clear 3x3 area around the candy (activates twice)
-      console.log('💥 Clearing 3x3 area around', row, col);
       for (let r = Math.max(0, row - 1); r <= Math.min(gridSize - 1, row + 1); r++) {
         for (let c = Math.max(0, col - 1); c <= Math.min(gridSize - 1, col + 1); c++) {
           cellsToRemove.push({ row: r, col: c });
         }
       }
       break;
-
     case 'color-bomb':
-      // Clear all candies of the target color (the color it was swapped with)
       const colorToRemove = targetColor !== undefined ? targetColor : grid[row][col];
-      console.log('💥 Color bomb clearing all', colorToRemove, 'colored candies');
       if (colorToRemove !== null) {
         for (let r = 0; r < gridSize; r++) {
           for (let c = 0; c < gridSize; c++) {
@@ -242,52 +203,47 @@ export function activateSpecialCandy(
         }
       }
       break;
-
     case 'jelly':
-      // Remove one layer (for now, just remove the jelly)
-      console.log('💥 Removing jelly at', row, col);
       cellsToRemove.push({ row, col });
       break;
   }
 
-  console.log('🎯 Cells to remove:', cellsToRemove.length);
   return cellsToRemove;
 }
 
+// ===========================
+// 防止初始有消除
+// ===========================
 export function removeInitialMatches(grid: (number | null)[][], gridSize: number, colors: string[]): void {
   let hasMatches = true;
   let iterations = 0;
-  const maxIterations = 50; // Prevent infinite loops
-  
+  const maxIterations = 50;
   while (hasMatches && iterations < maxIterations) {
     hasMatches = false;
     iterations++;
-    
     for (let row = 0; row < gridSize; row++) {
       for (let col = 0; col < gridSize; col++) {
-        // Check horizontal matches
         if (col <= gridSize - 3) {
-          if (grid[row][col] === grid[row][col + 1] && 
-              grid[row][col] === grid[row][col + 2] &&
-              grid[row][col] !== null) {
+          if (
+            grid[row][col] === grid[row][col + 1] &&
+            grid[row][col] === grid[row][col + 2] &&
+            grid[row][col] !== null
+          ) {
             grid[row][col] = Math.floor(Math.random() * colors.length);
             hasMatches = true;
           }
         }
-        // Check vertical matches
         if (row <= gridSize - 3) {
-          if (grid[row][col] === grid[row + 1][col] && 
-              grid[row][col] === grid[row + 2][col] &&
-              grid[row][col] !== null) {
+          if (
+            grid[row][col] === grid[row + 1][col] &&
+            grid[row][col] === grid[row + 2][col] &&
+            grid[row][col] !== null
+          ) {
             grid[row][col] = Math.floor(Math.random() * colors.length);
             hasMatches = true;
           }
         }
       }
     }
-  }
-  
-  if (iterations >= maxIterations) {
-    console.warn('⚠️ Max iterations reached in removeInitialMatches');
   }
 }
