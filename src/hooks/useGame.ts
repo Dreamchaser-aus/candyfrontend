@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { GameState, Cell, UserData, UserProfile, SpecialCandy } from '../types/game';
+import { GameState, Cell, UserData, UserProfile, SpecialCandy, FallingCandy } from '../types/game';
 import { GAME_CONFIG } from '../config/gameConfig';
-import { findSpecialMatches, removeInitialMatches, areAdjacent, activateSpecialCandy } from '../utils/gameUtils';
+import { findSpecialMatches, removeInitialMatches, areAdjacent, cellsEqual, activateSpecialCandy } from '../utils/gameUtils';
 import { apiService } from '../services/api';
 
 export function useGame() {
@@ -29,6 +29,7 @@ export function useGame() {
   const initializeGrid = useCallback(() => {
     const grid: (number | null)[][] = [];
     const specialCandies: SpecialCandy[][] = [];
+    
     for (let row = 0; row < GAME_CONFIG.GRID_SIZE; row++) {
       grid[row] = [];
       specialCandies[row] = [];
@@ -57,25 +58,36 @@ export function useGame() {
       dragStart: null,
       fallingCandies: []
     });
-    if (timerRef.current) clearInterval(timerRef.current);
+    
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
   }, [initializeGrid]);
 
   const fetchUserProfile = useCallback(async (userId: string) => {
     if (userId === 'guest') return;
+    
     try {
+      console.log('Fetching user profile for:', userId);
       const profile = await apiService.getUserProfile(userId);
+      console.log('User profile fetched:', profile);
       setUserProfile(profile);
-    } catch {
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
       setIsGuest(true);
       setUserProfile(null);
     }
   }, []);
 
   const startTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
     timerRef.current = setInterval(() => {
       setGameState(prev => {
         if (!prev.gameActive || prev.gamePaused) return prev;
+        
         const newTimeLeft = prev.timeLeft - 1;
         if (newTimeLeft <= 0) {
           return { ...prev, timeLeft: 0, gameActive: false };
@@ -91,138 +103,334 @@ export function useGame() {
       gameActive: false,
       gameHistory: [...(prev.gameHistory || []), prev.score]
     }));
+    
     if (!isGuest && userData.id !== 'guest') {
       try {
         const response = await apiService.submitScore(userData.id, gameState.score);
         setGameResponse(response);
         await fetchUserProfile(userData.id);
-      } catch {}
+      } catch (error) {
+        console.error('Failed to submit score:', error);
+      }
+    } else {
+      console.log('Guest mode - score not submitted to server');
     }
   }, [userData.id, gameState.score, fetchUserProfile, isGuest]);
 
-  // 填满所有空格
+  // ULTIMATE FILL SYSTEM - GUARANTEED TO WORK
   const forceCompleteGrid = useCallback((grid: (number | null)[][], specialCandies: SpecialCandy[][]) => {
+    console.log('🔧 FORCE COMPLETE GRID - Ensuring 100% filled grid');
+    
     const newGrid = grid.map(row => [...row]);
     const newSpecialGrid = specialCandies.map(row => [...row]);
+    
+    // Step 1: Fill every single empty space immediately
     for (let row = 0; row < GAME_CONFIG.GRID_SIZE; row++) {
       for (let col = 0; col < GAME_CONFIG.GRID_SIZE; col++) {
         if (newGrid[row][col] === null) {
           const newColor = Math.floor(Math.random() * GAME_CONFIG.COLORS.length);
           newGrid[row][col] = newColor;
           newSpecialGrid[row][col] = { type: 'normal', color: newColor };
+          console.log(`🔧 Force filled (${row},${col}) with color ${newColor}`);
         }
       }
     }
+    
+    // Step 2: Verify no empty spaces remain
+    let emptyCount = 0;
+    for (let row = 0; row < GAME_CONFIG.GRID_SIZE; row++) {
+      for (let col = 0; col < GAME_CONFIG.GRID_SIZE; col++) {
+        if (newGrid[row][col] === null) {
+          emptyCount++;
+        }
+      }
+    }
+    
+    console.log(`🔧 Force complete verification: ${emptyCount} empty spaces remaining`);
+    
     return { newGrid, newSpecialGrid };
   }, []);
 
-  // 重写消除与下落，解决动画卡死
+  // ENHANCED GRAVITY SYSTEM WITH IMMEDIATE FILL
   const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandies: SpecialCandy[][]) => {
+    console.log('🌊 Applying enhanced gravity and immediate fill...');
+    
     const newGrid = grid.map(row => [...row]);
     const newSpecialGrid = specialCandies.map(row => [...row]);
+    
+    // Process each column
     for (let col = 0; col < GAME_CONFIG.GRID_SIZE; col++) {
-      const existing: Array<{ candy: number, special: SpecialCandy }> = [];
+      console.log(`🔄 Processing column ${col}...`);
+      
+      // Collect all existing candies from bottom to top
+      const existingCandies: Array<{
+        candy: number;
+        special: SpecialCandy;
+      }> = [];
+
       for (let row = GAME_CONFIG.GRID_SIZE - 1; row >= 0; row--) {
         if (newGrid[row][col] !== null) {
-          existing.push({ candy: newGrid[row][col]!, special: newSpecialGrid[row][col] });
+          existingCandies.push({
+            candy: newGrid[row][col]!,
+            special: newSpecialGrid[row][col]
+          });
         }
       }
-      // 填到底部
-      for (let row = GAME_CONFIG.GRID_SIZE - 1, idx = 0; row >= 0; row--, idx++) {
-        if (idx < existing.length) {
-          newGrid[row][col] = existing[idx].candy;
-          newSpecialGrid[row][col] = existing[idx].special;
-        } else {
-          newGrid[row][col] = null;
-          newSpecialGrid[row][col] = { type: 'normal', color: 0 };
-        }
-      }
-      // 顶部空出补新糖果
+
+      console.log(`  📦 Found ${existingCandies.length} existing candies in column ${col}`);
+
+      // Clear the entire column
       for (let row = 0; row < GAME_CONFIG.GRID_SIZE; row++) {
-        if (newGrid[row][col] === null) {
-          const newColor = Math.floor(Math.random() * GAME_CONFIG.COLORS.length);
-          newGrid[row][col] = newColor;
-          newSpecialGrid[row][col] = { type: 'normal', color: newColor };
-        }
+        newGrid[row][col] = null;
+        newSpecialGrid[row][col] = { type: 'normal', color: 0 };
+      }
+
+      // Place existing candies at bottom
+      existingCandies.forEach((item, index) => {
+        const targetRow = GAME_CONFIG.GRID_SIZE - 1 - index;
+        newGrid[targetRow][col] = item.candy;
+        newSpecialGrid[targetRow][col] = item.special;
+        console.log(`  ⬇️ Placed existing candy at row ${targetRow}`);
+      });
+
+      // Fill remaining spaces with new candies
+      const emptySpaces = GAME_CONFIG.GRID_SIZE - existingCandies.length;
+      console.log(`  🆕 Filling ${emptySpaces} empty spaces in column ${col}`);
+      
+      for (let i = 0; i < emptySpaces; i++) {
+        const newColor = Math.floor(Math.random() * GAME_CONFIG.COLORS.length);
+        const targetRow = i;
+        newGrid[targetRow][col] = newColor;
+        newSpecialGrid[targetRow][col] = { type: 'normal', color: newColor };
+        console.log(`  ✨ Filled row ${targetRow} with new candy (color ${newColor})`);
       }
     }
+
+    // CRITICAL: Force complete any remaining empty spaces
     const { newGrid: finalGrid, newSpecialGrid: finalSpecialGrid } = forceCompleteGrid(newGrid, newSpecialGrid);
+
+    console.log('🌊 Gravity and fill complete - grid is now 100% filled');
     return { newGrid: finalGrid, newSpecialGrid: finalSpecialGrid };
   }, [forceCompleteGrid]);
 
-  // 防止 setState 死锁的 cascade 实现
+  // SIMPLIFIED CASCADE SYSTEM
   const processCascade = useCallback(() => {
-    let grid = gameState.grid.map(row => [...row]);
-    let specialCandies = gameState.specialCandies.map(row => [...row]);
-    let score = gameState.score;
+    console.log('🌊 Starting simplified cascade system...');
+    setGameState(prev => ({ ...prev, animating: true, fallingCandies: [] }));
+    
+    const processStep = () => {
+      setGameState(prev => {
+        console.log('🔍 Checking for matches...');
+        const { matches, specialCandies: newSpecialCandies } = findSpecialMatches(prev.grid, GAME_CONFIG.GRID_SIZE);
+        
+        if (matches.length === 0) {
+          console.log('✅ No more matches found, cascade complete');
+          
+          // FINAL SAFETY CHECK: Ensure grid is completely filled
+          const { newGrid: safeGrid, newSpecialGrid: safeSpecialGrid } = forceCompleteGrid(prev.grid, prev.specialCandies);
+          
+          return { 
+            ...prev, 
+            grid: safeGrid,
+            specialCandies: safeSpecialGrid,
+            animating: false,
+            fallingCandies: []
+          };
+        }
 
-    setGameState(prev => ({ ...prev, animating: true }));
+        console.log(`💥 Found ${matches.length} matches, ${newSpecialCandies.length} special candies`);
 
-    function step() {
-      const { matches, specialCandies: newSpecials } = findSpecialMatches(grid, GAME_CONFIG.GRID_SIZE);
-      if (matches.length === 0) {
-        const { newGrid, newSpecialGrid } = forceCompleteGrid(grid, specialCandies);
-        setGameState(prev => ({
+        const newGrid = prev.grid.map(row => [...row]);
+        const newSpecialGrid = prev.specialCandies.map(row => [...row]);
+        let newScore = prev.score;
+
+        // Create special candies first
+        const specialPositions = new Set<string>();
+        newSpecialCandies.forEach(special => {
+          console.log(`🍭 Creating special candy: ${special.type} at (${special.row},${special.col})`);
+          newSpecialGrid[special.row][special.col] = {
+            type: special.type,
+            color: newGrid[special.row][special.col]!
+          };
+          specialPositions.add(`${special.row},${special.col}`);
+        });
+
+        // Remove matched cells (except special candy positions)
+        matches.forEach(match => {
+          if (!specialPositions.has(`${match.row},${match.col}`)) {
+            newGrid[match.row][match.col] = null;
+            newScore += GAME_CONFIG.POINTS_PER_BLOCK;
+          }
+        });
+
+        // Apply gravity and fill immediately
+        const { newGrid: filledGrid, newSpecialGrid: filledSpecialGrid } = 
+          applyGravityAndFill(newGrid, newSpecialGrid);
+
+        console.log(`📊 Score increased by ${newScore - prev.score} points`);
+
+        const newState = {
           ...prev,
-          grid: newGrid,
-          specialCandies: newSpecialGrid,
-          score,
-          animating: false,
-          fallingCandies: []
-        }));
-        return;
-      }
-      // 产生特殊糖果
-      newSpecials.forEach(special => {
-        specialCandies[special.row][special.col] = {
-          type: special.type,
-          color: grid[special.row][special.col]!
+          grid: filledGrid,
+          specialCandies: filledSpecialGrid,
+          score: newScore,
+          fallingCandies: [] // No falling animations, immediate fill
         };
+
+        // Continue cascade after a short delay
+        setTimeout(processStep, 500);
+        
+        return newState;
       });
-      // 消除
-      matches.forEach(match => {
-        grid[match.row][match.col] = null;
-        score += GAME_CONFIG.POINTS_PER_BLOCK;
-      });
-      // 下落补新
-      const filled = applyGravityAndFill(grid, specialCandies);
-      grid = filled.newGrid;
-      specialCandies = filled.newSpecialGrid;
-      setTimeout(step, 300);
-    }
-    setTimeout(step, 100);
-  }, [gameState.grid, gameState.specialCandies, gameState.score, applyGravityAndFill, forceCompleteGrid]);
+    };
+
+    // Start the cascade
+    setTimeout(processStep, 200);
+  }, [applyGravityAndFill, forceCompleteGrid]);
 
   const attemptSwap = useCallback((cell1: Cell, cell2: Cell) => {
-    // 防止动画未结束时操作
-    if (gameState.animating) return;
-    if (!areAdjacent(cell1, cell2)) return;
-
+    console.log(`🔄 Attempting swap: (${cell1.row},${cell1.col}) ↔ (${cell2.row},${cell2.col})`);
+    
+    if (!areAdjacent(cell1, cell2)) {
+      console.log('❌ Cells are not adjacent');
+      return;
+    }
+    
     setGameState(prev => {
       const newGrid = prev.grid.map(row => [...row]);
       const newSpecialGrid = prev.specialCandies.map(row => [...row]);
-      // 特殊糖果逻辑略，如有需求可加（保持和你原本一致）
-      // 普通交换
+      
+      // Check if either cell has a special candy
+      const special1 = prev.specialCandies[cell1.row][cell1.col];
+      const special2 = prev.specialCandies[cell2.row][cell2.col];
+      
+      // SPECIAL CASE: Color bomb activation
+      if (special1.type === 'color-bomb' || special2.type === 'color-bomb') {
+        console.log('💣 COLOR BOMB ACTIVATION!');
+        let cellsToRemove: { row: number; col: number }[] = [];
+        
+        if (special1.type === 'color-bomb') {
+          // Color bomb removes all candies of the color it was swapped with
+          const targetColor = newGrid[cell2.row][cell2.col];
+          console.log(`💣 Color bomb at (${cell1.row},${cell1.col}) targeting color ${targetColor}`);
+          const removed = activateSpecialCandy(newGrid, newSpecialGrid, cell1.row, cell1.col, GAME_CONFIG.GRID_SIZE, targetColor);
+          cellsToRemove = cellsToRemove.concat(removed);
+        }
+        
+        if (special2.type === 'color-bomb') {
+          // Color bomb removes all candies of the color it was swapped with
+          const targetColor = newGrid[cell1.row][cell1.col];
+          console.log(`💣 Color bomb at (${cell2.row},${cell2.col}) targeting color ${targetColor}`);
+          const removed = activateSpecialCandy(newGrid, newSpecialGrid, cell2.row, cell2.col, GAME_CONFIG.GRID_SIZE, targetColor);
+          cellsToRemove = cellsToRemove.concat(removed);
+        }
+        
+        // Remove duplicate cells
+        const uniqueCells = cellsToRemove.filter((cell, index, self) => 
+          index === self.findIndex(c => c.row === cell.row && c.col === cell.col)
+        );
+        
+        console.log(`💣 Color bomb will remove ${uniqueCells.length} cells`);
+        
+        // Remove cells and calculate score
+        let newScore = prev.score;
+        uniqueCells.forEach(cell => {
+          if (newGrid[cell.row][cell.col] !== null) {
+            newGrid[cell.row][cell.col] = null;
+            newSpecialGrid[cell.row][cell.col] = { type: 'normal', color: 0 };
+            newScore += GAME_CONFIG.POINTS_PER_BLOCK * 3; // Color bomb gives triple points
+          }
+        });
+        
+        const newState = {
+          ...prev,
+          grid: newGrid,
+          specialCandies: newSpecialGrid,
+          score: newScore,
+          movesLeft: prev.movesLeft - 1,
+          selectedCell: null,
+          dragStart: null,
+          fallingCandies: []
+        };
+        
+        setTimeout(() => processCascade(), 150);
+        return newState;
+      }
+      
+      // Handle other special candy activation (striped, wrapped)
+      if (special1.type !== 'normal' || special2.type !== 'normal') {
+        console.log('🎆 Activating other special candies!');
+        let cellsToRemove: { row: number; col: number }[] = [];
+        
+        if (special1.type !== 'normal' && special1.type !== 'color-bomb') {
+          const removed = activateSpecialCandy(newGrid, newSpecialGrid, cell1.row, cell1.col, GAME_CONFIG.GRID_SIZE);
+          cellsToRemove = cellsToRemove.concat(removed);
+        }
+        
+        if (special2.type !== 'normal' && special2.type !== 'color-bomb') {
+          const removed = activateSpecialCandy(newGrid, newSpecialGrid, cell2.row, cell2.col, GAME_CONFIG.GRID_SIZE);
+          cellsToRemove = cellsToRemove.concat(removed);
+        }
+        
+        // Remove duplicate cells
+        const uniqueCells = cellsToRemove.filter((cell, index, self) => 
+          index === self.findIndex(c => c.row === cell.row && c.col === cell.col)
+        );
+        
+        console.log(`🎆 Special candy activation will remove ${uniqueCells.length} cells`);
+        
+        // Remove cells and calculate score
+        let newScore = prev.score;
+        uniqueCells.forEach(cell => {
+          if (newGrid[cell.row][cell.col] !== null) {
+            newGrid[cell.row][cell.col] = null;
+            newSpecialGrid[cell.row][cell.col] = { type: 'normal', color: 0 };
+            newScore += GAME_CONFIG.POINTS_PER_BLOCK * 2;
+          }
+        });
+        
+        const newState = {
+          ...prev,
+          grid: newGrid,
+          specialCandies: newSpecialGrid,
+          score: newScore,
+          movesLeft: prev.movesLeft - 1,
+          selectedCell: null,
+          dragStart: null,
+          fallingCandies: []
+        };
+        
+        setTimeout(() => processCascade(), 150);
+        return newState;
+      }
+      
+      // Regular swap
       const temp = newGrid[cell1.row][cell1.col];
       newGrid[cell1.row][cell1.col] = newGrid[cell2.row][cell2.col];
       newGrid[cell2.row][cell2.col] = temp;
+      
       const tempSpecial = newSpecialGrid[cell1.row][cell1.col];
       newSpecialGrid[cell1.row][cell1.col] = newSpecialGrid[cell2.row][cell2.col];
       newSpecialGrid[cell2.row][cell2.col] = tempSpecial;
-      // 是否有消除
+      
+      // Check for matches
       const { matches } = findSpecialMatches(newGrid, GAME_CONFIG.GRID_SIZE);
+      
       if (matches.length === 0) {
-        // 没有则还原
-        const t = newGrid[cell1.row][cell1.col];
+        console.log('❌ No matches found, reverting swap');
+        // No matches, swap back
+        const temp = newGrid[cell1.row][cell1.col];
         newGrid[cell1.row][cell1.col] = newGrid[cell2.row][cell2.col];
-        newGrid[cell2.row][cell2.col] = t;
-        const ts = newSpecialGrid[cell1.row][cell1.col];
+        newGrid[cell2.row][cell2.col] = temp;
+        
+        const tempSpecial = newSpecialGrid[cell1.row][cell1.col];
         newSpecialGrid[cell1.row][cell1.col] = newSpecialGrid[cell2.row][cell2.col];
-        newSpecialGrid[cell2.row][cell2.col] = ts;
+        newSpecialGrid[cell2.row][cell2.col] = tempSpecial;
+        
         return prev;
       } else {
-        setTimeout(() => processCascade(), 150);
-        return {
+        console.log('✅ Valid move! Found', matches.length, 'matches');
+        const newState = {
           ...prev,
           grid: newGrid,
           specialCandies: newSpecialGrid,
@@ -231,22 +439,29 @@ export function useGame() {
           dragStart: null,
           fallingCandies: []
         };
+        
+        setTimeout(() => processCascade(), 150);
+        return newState;
       }
     });
-  }, [processCascade, gameState.animating]);
+  }, [processCascade]);
 
   const startGame = useCallback(() => {
     if (!userProfile || userProfile.token <= 0) {
       alert("🚫 You don't have enough tokens to start the game.");
       return;
     }
+
+    console.log('🎮 Starting game!');
     setGameState(prev => ({ ...prev, gameActive: true, gamePaused: false }));
     startTimer();
   }, [userProfile, startTimer]);
 
   const pauseGame = useCallback(() => {
     setGameState(prev => ({ ...prev, gamePaused: true }));
-    if (timerRef.current) clearInterval(timerRef.current);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
   }, []);
 
   const resumeGame = useCallback(() => {
@@ -254,35 +469,55 @@ export function useGame() {
     startTimer();
   }, [startTimer]);
 
+  // Initialize Telegram user
   useEffect(() => {
+    console.log('Checking for Telegram WebApp...');
+    
     if (window.Telegram?.WebApp) {
+      console.log('Telegram WebApp detected');
       window.Telegram.WebApp.ready();
       const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+      
       if (tgUser?.id) {
         const userId = tgUser.id.toString();
+        console.log('Telegram user detected:', userId, tgUser);
         setUserData({ id: userId });
         setIsGuest(false);
         fetchUserProfile(userId);
       } else {
+        console.log('Telegram WebApp available but no user data found - using guest mode');
         setUserData({ id: 'guest' });
         setIsGuest(true);
         setUserProfile(null);
       }
     } else {
+      console.log('Telegram WebApp not available - using guest mode');
       setUserData({ id: 'guest' });
       setIsGuest(true);
       setUserProfile(null);
     }
   }, [fetchUserProfile]);
 
-  useEffect(() => { initGame(); }, [initGame]);
+  // Initialize game
+  useEffect(() => {
+    initGame();
+  }, [initGame]);
+
+  // Check for game end
   useEffect(() => {
     if (gameState.timeLeft <= 0 || gameState.movesLeft <= 0) {
+      console.log("⏰ Game ended, calling endGame()");
       endGame();
     }
-  }, [gameState.timeLeft, gameState.movesLeft, endGame]);
+  }, [gameState.timeLeft, gameState.movesLeft]);
+
+  // Cleanup timer on unmount
   useEffect(() => {
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
   }, []);
 
   return {
