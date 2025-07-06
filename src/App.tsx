@@ -1,3 +1,4 @@
+// App.tsx
 import React, { useEffect, useState } from 'react';
 import { Game } from './components/Game';
 import { API_BASE_URL } from './config/gameConfig';
@@ -29,17 +30,7 @@ function App() {
   }, []);
 
   return (
-    <div>
-      {/* 可选：调试用 */}
-      <div style={{
-        position: "fixed",
-        top: 0, left: 0, zIndex: 9999,
-        background: "#ffd", color: "#d00", fontSize: 20, padding: "4px 12px"
-      }}>
-        userId: {telegramId || "无"}
-      </div>
-      <Game isGuest={isGuest} />
-    </div>
+    <Game isGuest={isGuest} />
   );
 }
 
