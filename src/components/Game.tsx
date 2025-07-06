@@ -9,15 +9,17 @@ import { Leaderboard } from './Leaderboard';
 import { MainMenu } from './MainMenu';
 import { Cell } from '../types/game';
 
-export function Game() {
+// 👇 修改：加上 props 接收 isGuest
+export function Game({ isGuest }: { isGuest: boolean }) {
   const [currentView, setCurrentView] = useState<'menu' | 'game' | 'leaderboard' | 'settings' | 'howto'>('menu');
-  
+
+  // 注意：isGuest 不再从 useGame 取，而是由 App 传入
   const {
     gameState,
     userData,
     userProfile,
     gameResponse,
-    isGuest,
+    // isGuest, // ❌ 删掉这里
     initGame,
     startGame,
     pauseGame,
@@ -44,7 +46,6 @@ export function Game() {
 
   const handlePlayGame = useCallback(() => {
     setCurrentView('game');
-    // Don't start the game automatically, just show the game layout
   }, []);
 
   const handleBackToMenu = useCallback(() => {
@@ -54,6 +55,7 @@ export function Game() {
     }
   }, [gameState.gameActive, pauseGame]);
 
+  // 视图切换
   if (currentView === 'menu') {
     return (
       <MainMenu
@@ -137,6 +139,7 @@ export function Game() {
     );
   }
 
+  // 游戏主界面
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center p-4">
       <div className="bg-gray-800/90 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-gray-700/50 max-w-2xl w-full">
@@ -155,12 +158,11 @@ export function Game() {
         />
         
         <GameStats 
-          gameHistory={gameState.gameHistory || []} // 防止 undefined
+          gameHistory={gameState.gameHistory || []}
           timeLeft={gameState.timeLeft}
           movesLeft={gameState.movesLeft}
         />
 
-        
         <GameControls
           gameActive={gameState.gameActive}
           gamePaused={gameState.gamePaused}
