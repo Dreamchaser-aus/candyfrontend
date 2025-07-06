@@ -15,4 +15,4 @@ export const GAME_CONFIG: GameConfig = {
   MAX_MOVES: 30
 };
 
-export const API_BASE_URL = 'https://candybackend-production.up.railway.app/admin';
+export const API_BASE_URL = 'https://candybackend-production.up.railway.app';
