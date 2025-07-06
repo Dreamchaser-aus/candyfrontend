@@ -8,24 +8,27 @@ function App() {
   const [isBound, setIsBound] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // 尝试从 Telegram WebApp 读取用户身份
+    // 读取 Telegram WebApp 用户
     const tg = (window as any).Telegram?.WebApp;
     const user = tg?.initDataUnsafe?.user;
-
-    console.log('Telegram WebApp:', tg);
-    console.log('Telegram initDataUnsafe:', tg?.initDataUnsafe);
-    console.log('Detected Telegram user:', user);
-
     setTelegramUser(user || null);
     setLoading(false);
 
+    console.log('Telegram WebApp:', tg);
+    console.log('initDataUnsafe:', tg?.initDataUnsafe);
+    console.log('user:', user);
+
     if (user && user.id) {
-      // 检查后端绑定
       fetch(`${API_BASE_URL}/api/check_bind?user_id=${user.id}`)
-        .then(res => {
-          setIsBound(res.status === 200);
+        .then(async res => {
+          const result = await res.json();
+          console.log('check_bind response:', result, 'status:', res.status);
+          setIsBound(res.status === 200 && result.status === "ok");
         })
-        .catch(() => setIsBound(false));
+        .catch((e) => {
+          console.error("check_bind error:", e);
+          setIsBound(false);
+        });
     } else {
       setIsBound(false);
     }
@@ -36,7 +39,7 @@ function App() {
     return <div style={{ color: '#fff', textAlign: 'center', marginTop: 50 }}>加载中...</div>;
   }
 
-  // 非 WebApp 环境（user 信息没有获取到）
+  // 非 WebApp 环境
   if (!telegramUser) {
     return (
       <div style={{ color: '#fff', textAlign: 'center', marginTop: 80 }}>
@@ -48,8 +51,6 @@ function App() {
 
   // 未绑定手机号
   if (isBound === false) {
-    // 弹窗或重定向提示去绑定手机号
-    window.location.href = 'https://t.me/candycrushvite_bot?start=bind';
     return (
       <div style={{ color: '#fff', textAlign: 'center', marginTop: 80 }}>
         <div style={{ fontSize: 22, marginBottom: 16 }}>请先在 Telegram Bot 绑定手机号！</div>
@@ -59,7 +60,7 @@ function App() {
           style={{ color: '#3cf', fontSize: 20, fontWeight: 'bold' }}
           rel="noopener noreferrer"
         >
-          点此去绑定
+          👉 点此去绑定
         </a>
       </div>
     );
