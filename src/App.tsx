@@ -8,38 +8,34 @@ function App() {
   const [isBound, setIsBound] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // 读取 Telegram WebApp 用户
+    // 1. 尝试从 Telegram WebApp 读取用户身份
     const tg = (window as any).Telegram?.WebApp;
     const user = tg?.initDataUnsafe?.user;
-    setTelegramUser(user || null);
-    setLoading(false);
 
     console.log('Telegram WebApp:', tg);
-    console.log('initDataUnsafe:', tg?.initDataUnsafe);
-    console.log('user:', user);
+    console.log('Telegram initDataUnsafe:', tg?.initDataUnsafe);
+    console.log('Detected Telegram user:', user);
+
+    setTelegramUser(user || null);
 
     if (user && user.id) {
+      // 2. 检查后端绑定（只要不是 200，都视为未绑定）
       fetch(`${API_BASE_URL}/api/check_bind?user_id=${user.id}`)
-        .then(async res => {
-          const result = await res.json();
-          console.log('check_bind response:', result, 'status:', res.status);
-          setIsBound(res.status === 200 && result.status === "ok");
-        })
-        .catch((e) => {
-          console.error("check_bind error:", e);
-          setIsBound(false);
-        });
+        .then(res => setIsBound(res.ok))
+        .catch(() => setIsBound(false))
+        .finally(() => setLoading(false));
     } else {
       setIsBound(false);
+      setLoading(false);
     }
   }, []);
 
   // Loading 状态
-  if (loading) {
-    return <div style={{ color: '#fff', textAlign: 'center', marginTop: 50 }}>加载中...</div>;
+  if (loading || isBound === null) {
+    return <div style={{ color: '#fff', textAlign: 'center', marginTop: 80 }}>加载中...</div>;
   }
 
-  // 非 WebApp 环境
+  // 非 WebApp 环境（user 信息没有获取到）
   if (!telegramUser) {
     return (
       <div style={{ color: '#fff', textAlign: 'center', marginTop: 80 }}>
@@ -57,7 +53,7 @@ function App() {
         <a
           href="https://t.me/candycrushvite_bot?start=bind"
           target="_blank"
-          style={{ color: '#3cf', fontSize: 20, fontWeight: 'bold' }}
+          style={{ color: '#3cf', fontSize: 20, fontWeight: 'bold', textDecoration: 'none' }}
           rel="noopener noreferrer"
         >
           👉 点此去绑定
@@ -66,7 +62,7 @@ function App() {
     );
   }
 
-  // 通过身份和绑定检查，进入游戏
+  // 已通过所有检查，渲染游戏
   return <Game telegramUser={telegramUser} />;
 }
 
