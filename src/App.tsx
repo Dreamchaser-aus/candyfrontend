@@ -30,7 +30,7 @@ function App() {
     setLoading(false);
 
     if (user && user.id) {
-      fetch(`${API_BASE_URL}/api/user_info?user_id=${user_id}`)
+     fetch(`${API_BASE_URL}/api/check_bind?user_id=${user.id}`)
         .then(async res => {
           const text = await res.text();
           info += `[CHECK_BIND] Status: ${res.status}, Body: ${text}\n`;
