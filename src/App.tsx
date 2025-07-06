@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Game } from './components/Game';
-import { API_BASE_URL } from './config/game'; // 按你的实际路径
+import { API_BASE_URL } from './config/gameConfig'; // 按你的实际路径
 
 const tg = (window as any).Telegram?.WebApp;
 const telegramId = tg?.initDataUnsafe?.user?.id;
