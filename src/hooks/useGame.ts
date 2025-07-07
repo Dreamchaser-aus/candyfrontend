@@ -289,6 +289,10 @@ export function useGame() {
   }, [applyGravityAndFill, forceCompleteGrid]);
 
   const attemptSwap = useCallback((cell1: Cell, cell2: Cell) => {
+    if (gameState.animating) {
+      console.log('动画未结束，禁止操作！');
+      return;
+    }
     console.log(`🔄 Attempting swap: (${cell1.row},${cell1.col}) ↔ (${cell2.row},${cell2.col})`);
     
     if (!areAdjacent(cell1, cell2)) {
