@@ -25,7 +25,8 @@ export function Game({ isGuest }: { isGuest: boolean }) {
     pauseGame,
     resumeGame,
     attemptSwap,
-    setGameState
+    setGameState,
+    debugLog
   } = useGame();
 
   const handleCellInteraction = useCallback((from: Cell, to: Cell) => {
@@ -186,7 +187,27 @@ export function Game({ isGuest }: { isGuest: boolean }) {
           onRestart={handleRestart}
           isGuest={isGuest}
         />
-      </div>
+
+        {debugLog && (
+          <div
+            style={{
+              width: '100%',
+              minHeight: 28,
+              background: '#232',
+              color: '#fff',
+              fontSize: 12,
+              textAlign: 'center',
+              marginTop: 10,
+              borderRadius: 6,
+              letterSpacing: 1,
+              fontFamily: 'monospace',
+              opacity: 0.88,
+            }}
+          >
+            {debugLog}
+          </div>
+        )}
+      </div> {/* 这是 bg-gray-800/90 那个div的结尾 */}
     </div>
   );
 }
