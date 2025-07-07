@@ -31,7 +31,7 @@ export const apiService = {
       throw new Error(await response.text());
     }
     return response.json();
-  }
+  }；
 
   // ✅ 获取排行榜
   async getRanking(): Promise<RankingEntry[]> {
