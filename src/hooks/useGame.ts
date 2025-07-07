@@ -264,7 +264,6 @@ export function useGame() {
 
         // Remove matched cells (except special candy positions)
         matches.forEach(match => {
-          if (!specialPositions.has(`${match.row},${match.col}`)) {
             newGrid[match.row][match.col] = null;
             newScore += GAME_CONFIG.POINTS_PER_BLOCK;
           }
