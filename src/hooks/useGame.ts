@@ -98,25 +98,21 @@ export function useGame() {
     }, 1000);
   }, []);
 
-  const endGame = useCallback(async () => {
-    setGameState(prev => ({
-      ...prev,
-      gameActive: false,
-      gameHistory: [...(prev.gameHistory || []), prev.score]
-    }));
-    
-    if (!isGuest && userData.id !== 'guest') {
-      try {
-        const response = await apiService.submitScore(userData.id, gameState.score);
-        setGameResponse(response);
-        await fetchUserProfile(userData.id);
-      } catch (error) {
-        console.error('Failed to submit score:', error);
+  const endGame = useCallback(() => {
+    setGameState(prev => {
+      if (!isGuest && userData.id !== 'guest') {
+        apiService.submitScore(userData.id, prev.score)
+          .then(response => setGameResponse(response))
+          .catch(error => console.error('Failed to submit score:', error));
+        fetchUserProfile(userData.id);
       }
-    } else {
-      console.log('Guest mode - score not submitted to server');
-    }
-  }, [userData.id, gameState.score, fetchUserProfile, isGuest]);
+      return {
+        ...prev,
+        gameActive: false,
+        gameHistory: [...(prev.gameHistory || []), prev.score]
+      };
+    });
+  }, [userData.id, fetchUserProfile, isGuest]);
 
   // ULTIMATE FILL SYSTEM - GUARANTEED TO WORK
   const forceCompleteGrid = useCallback((grid: (number | null)[][], specialCandies: SpecialCandy[][]) => {
