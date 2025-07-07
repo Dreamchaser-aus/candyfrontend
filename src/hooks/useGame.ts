@@ -222,6 +222,10 @@ export function useGame() {
       setGameState(prev => {
         console.log('🔍 Checking for matches...');
         const { matches, specialCandies: newSpecialCandies } = findSpecialMatches(prev.grid, GAME_CONFIG.GRID_SIZE);
+
+        console.log('当前棋盘：', prev.grid);
+        console.log('判定 matches:', matches);
+        console.log('准备消除 matches:', matches.map(m => `(${m.row},${m.col})`));
         
         if (matches.length === 0) {
           console.log('✅ No more matches found, cascade complete');
