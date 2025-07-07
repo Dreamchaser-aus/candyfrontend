@@ -266,7 +266,6 @@ export function useGame() {
         matches.forEach(match => {
             newGrid[match.row][match.col] = null;
             newScore += GAME_CONFIG.POINTS_PER_BLOCK;
-          }
         });
 
         // Apply gravity and fill immediately
