@@ -266,6 +266,9 @@ export function useGame() {
         });
 
         if (matches.length > 0) setRemovedCells(matches);
+            console.log('setRemovedCells: ', matches);  // ← 这里
+            setRemovedCells(matches);
+        }
 
         // Apply gravity and fill immediately
         const { newGrid: filledGrid, newSpecialGrid: filledSpecialGrid } = 
