@@ -286,7 +286,6 @@ export function useGame() {
 
         // Continue cascade after a short delay
         setTimeout(processStep, 500);
-        
         return newState;
       });
     };
