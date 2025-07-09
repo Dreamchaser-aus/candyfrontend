@@ -1,0 +1,7 @@
+{
+  "welcome": "欢迎来到加密三消游戏！",
+  "bind_phone": "请先在 Telegram Bot 绑定手机号！",
+  "go_bind": "👉 点此去绑定",
+  "loading": "加载中...",
+  "not_in_tg": "请在 Telegram 客户端内通过 Bot 按钮进入游戏"
+}
