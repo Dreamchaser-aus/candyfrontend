@@ -11,7 +11,6 @@ export function GameStats({ gameHistory, timeLeft, movesLeft }: GameStatsProps) 
  
 
   return (
-    {/*
     <div className="flex justify-between gap-4 mb-6">
       {/* Last Score 移除 */}
     {/*
