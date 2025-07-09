@@ -8,11 +8,12 @@ interface GameStatsProps {
 }
 
 export function GameStats({ gameHistory, timeLeft, movesLeft }: GameStatsProps) {
-  const lastScore = gameHistory.length > 0 ? gameHistory[gameHistory.length - 1] : 0;
   const highScore = gameHistory.length > 0 ? Math.max(...gameHistory) : 0;
 
   return (
     <div className="flex justify-between gap-4 mb-6">
+      {/* Last Score 移除 */}
+      {/*
       <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-3 rounded-2xl flex-1">
         <Trophy className="text-yellow-400" size={20} />
         <div className="text-white">
@@ -20,6 +21,7 @@ export function GameStats({ gameHistory, timeLeft, movesLeft }: GameStatsProps) 
           <div className="font-bold text-lg">{lastScore}</div>
         </div>
       </div>
+      */}
 
       <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-3 rounded-2xl flex-1">
         <Award className="text-orange-300" size={20} />
