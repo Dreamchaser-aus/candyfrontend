@@ -265,9 +265,9 @@ export function useGame() {
             newScore += GAME_CONFIG.POINTS_PER_BLOCK;
         });
 
-        if (matches.length > 0) setRemovedCells(matches);
-            console.log('setRemovedCells: ', matches);  // ← 这里
+        if (matches.length > 0) {
             setRemovedCells(matches);
+            console.log('setRemovedCells: ', matches);;
         }
 
         // Apply gravity and fill immediately
