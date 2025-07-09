@@ -10,37 +10,6 @@ function App() {
 
   const { t, i18n } = useTranslation();
 
-  // 语言切换按钮组件
-  const LangSwitcher = () => (
-    <div style={{ textAlign: 'right', padding: '8px 16px' }}>
-      <button
-        onClick={() => i18n.changeLanguage('zh')}
-        style={{
-          marginRight: 8,
-          background: 'none',
-          border: 'none',
-          color: i18n.language === 'zh' ? '#000' : '#888',
-          fontWeight: i18n.language === 'zh' ? 'bold' : 'normal',
-          cursor: 'pointer'
-        }}
-      >
-        中文
-      </button>
-      <button
-        onClick={() => i18n.changeLanguage('en')}
-        style={{
-          background: 'none',
-          border: 'none',
-          color: i18n.language === 'en' ? '#000' : '#888',
-          fontWeight: i18n.language === 'en' ? 'bold' : 'normal',
-          cursor: 'pointer'
-        }}
-      >
-        English
-      </button>
-    </div>
-  );
-
   useEffect(() => {
     // Telegram WebApp 取用户
     let tg = undefined, user = undefined;
