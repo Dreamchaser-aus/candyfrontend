@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Game } from './components/Game';
 import { API_BASE_URL } from './config/gameConfig';
-import { useTranslation } from 'react-i18next'; // 1️⃣ 导入
-import LanguageSwitcher from './components/LanguageSwitcher';
-// 若未设置请先 npm i react-i18next i18next
+import { useTranslation } from 'react-i18next';
+// import LanguageSwitcher from './components/LanguageSwitcher'; // 可以删掉这行
 
 function App() {
   const [telegramUser, setTelegramUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isBound, setIsBound] = useState<boolean | null>(null);
 
-  const { t, i18n } = useTranslation(); // 2️⃣ 获取t和i18n对象
+  const { t, i18n } = useTranslation();
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
@@ -28,11 +27,34 @@ function App() {
     }
   }, []);
 
-  // 3️⃣ 可选：提供切换按钮
+  // 切换语言按钮
   const LangSwitcher = () => (
     <div style={{ textAlign: 'right', padding: '8px 16px' }}>
-      <button onClick={() => i18n.changeLanguage('zh')} style={{ marginRight: 8 }}>中文</button>
-      <button onClick={() => i18n.changeLanguage('en')}>English</button>
+      <button
+        onClick={() => i18n.changeLanguage('zh')}
+        style={{
+          marginRight: 8,
+          background: 'none',
+          border: 'none',
+          color: i18n.language === 'zh' ? '#000' : '#888',
+          fontWeight: i18n.language === 'zh' ? 'bold' : 'normal',
+          cursor: 'pointer'
+        }}
+      >
+        中文
+      </button>
+      <button
+        onClick={() => i18n.changeLanguage('en')}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: i18n.language === 'en' ? '#000' : '#888',
+          fontWeight: i18n.language === 'en' ? 'bold' : 'normal',
+          cursor: 'pointer'
+        }}
+      >
+        English
+      </button>
     </div>
   );
 
