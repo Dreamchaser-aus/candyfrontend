@@ -311,14 +311,27 @@ export function GameCanvas({
     <div
       className="relative flex justify-center"
       style={{
-        width: canvasSize,
-        height: canvasSize,
+        width: '100%',
+        maxWidth: 420,
+        aspectRatio: '1 / 1',
+        margin: '0 auto',
       }}
     >
       <canvas
         ref={canvasRef}
-        width={canvasSize}
-        height={canvasSize}
+        width={GAME_CONFIG.GRID_SIZE * GAME_CONFIG.CELL_SIZE}
+        height={GAME_CONFIG.GRID_SIZE * GAME_CONFIG.CELL_SIZE}
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          zIndex: 1,
+          maxWidth: '100vw',
+          maxHeight: '100vw',
+          touchAction: 'none',
+        }}
         className="border-2 border-gray-600/50 rounded-xl bg-gray-900/30 backdrop-blur-sm cursor-grab active:cursor-grabbing max-w-full shadow-2xl"
         style={{
           touchAction: 'none',
