@@ -8,12 +8,13 @@ interface GameCanvasProps {
   onCellInteraction: (from: Cell, to: Cell) => void;
   onCellSelect: (cell: Cell | null) => void;
   onDragStart: (cell: Cell | null) => void;
+  triggerExplosion: (x: number, y: number, size?: number) => void;
 }
 
 // Crypto symbols mapping
 const CRYPTO_SYMBOLS = ['₿', 'Ξ', 'D', 'T', 'X'];
 
-export function GameCanvas({ gameState, onCellInteraction, onCellSelect, onDragStart }: GameCanvasProps) {
+export function GameCanvas({ gameState, onCellInteraction, onCellSelect, onDragStart, triggerExplosion }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragStartRef = useRef<Cell | null>(null);
 
@@ -329,6 +330,9 @@ export function GameCanvas({ gameState, onCellInteraction, onCellSelect, onDragS
         className="border-2 border-gray-600/50 rounded-xl bg-gray-900/30 backdrop-blur-sm cursor-grab active:cursor-grabbing max-w-full shadow-2xl"
         style={{ touchAction: 'none' }}
       />
+      <button onClick={() => triggerExplosion(100, 100, GAME_CONFIG.CELL_SIZE)}>
+        测试爆炸
+      </button>
     </div>
   );
 }
