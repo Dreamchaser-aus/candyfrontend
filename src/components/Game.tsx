@@ -182,7 +182,7 @@ export function Game({ isGuest }: { isGuest: boolean }) {
         />
 
         <GameStats
-          gameHistory={gameState.gameHistory || []}
+          highScore={userProfile?.high_score || 0}
           timeLeft={gameState.timeLeft}
           movesLeft={gameState.movesLeft}
         />
