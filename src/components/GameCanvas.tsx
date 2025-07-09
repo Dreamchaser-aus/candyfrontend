@@ -306,10 +306,15 @@ export function GameCanvas({
 
   // 画布和爆炸动画层
   const canvasSize = GAME_CONFIG.GRID_SIZE * GAME_CONFIG.CELL_SIZE;
+  function getScale() {
+    const canvas = canvasRef.current;
+    if (!canvas) return 1;
+    return canvas.offsetWidth / canvas.width;
+  }
 
   return (
     <div
-      className="relative flex justify-center"
+      className="relative flex justify-center w-full max-w-[420px] aspect-square mx-auto"
       style={{
         width: '100%',
         maxWidth: 420,
@@ -319,8 +324,8 @@ export function GameCanvas({
     >
       <canvas
         ref={canvasRef}
-        width={GAME_CONFIG.GRID_SIZE * GAME_CONFIG.CELL_SIZE}
-        height={GAME_CONFIG.GRID_SIZE * GAME_CONFIG.CELL_SIZE}
+        width={canvasSize}
+        height={canvasSize}
         style={{
           width: '100%',
           height: '100%',
@@ -345,9 +350,9 @@ export function GameCanvas({
       {explosions.map(e => (
         <Explosion
           key={e.id}
-          x={e.x}
-          y={e.y}
-          size={e.size}
+          x={e.x * getScale()}
+          y={e.y * getScale()}
+          size={e.size * getScale()}
           onFinish={() => onExplosionFinish(e.id)}
         />
       ))}
