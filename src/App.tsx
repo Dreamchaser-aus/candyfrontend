@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Game } from './components/Game';
 import { API_BASE_URL } from './config/gameConfig';
 import { useTranslation } from 'react-i18next'; // 1️⃣ 导入
+import LanguageSwitcher from './components/LanguageSwitcher';
 // 若未设置请先 npm i react-i18next i18next
 
 function App() {
