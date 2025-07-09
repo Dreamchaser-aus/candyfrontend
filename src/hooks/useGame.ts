@@ -26,6 +26,7 @@ export function useGame() {
   const [isGuest, setIsGuest] = useState(true);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [debugLog, setDebugLog] = useState('');
+  const [removedCells, setRemovedCells] = useState<{ row: number; col: number }[]>([]);
 
   const initializeGrid = useCallback(() => {
     const grid: (number | null)[][] = [];
@@ -264,6 +265,8 @@ export function useGame() {
             newScore += GAME_CONFIG.POINTS_PER_BLOCK;
         });
 
+        if (matches.length > 0) setRemovedCells(matches);
+
         // Apply gravity and fill immediately
         const { newGrid: filledGrid, newSpecialGrid: filledSpecialGrid } = 
           applyGravityAndFill(newGrid, newSpecialGrid);
@@ -346,6 +349,8 @@ export function useGame() {
             newScore += GAME_CONFIG.POINTS_PER_BLOCK * 3; // Color bomb gives triple points
           }
         });
+        
+        if (uniqueCells.length > 0) setRemovedCells(uniqueCells);
         
         const newState = {
           ...prev,
@@ -537,6 +542,8 @@ export function useGame() {
     resumeGame,
     attemptSwap,
     setGameState,
-    debugLog
+    debugLog,
+    removedCells,
+    setRemovedCells,
   };
 }
