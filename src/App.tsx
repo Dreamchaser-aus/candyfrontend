@@ -78,10 +78,7 @@ function App() {
 
   // 游戏主界面
   return (
-    <>
-      <LangSwitcher />
       <Game telegramUser={telegramUser} />
-    </>
   );
 }
 
