@@ -9,6 +9,7 @@ import { Leaderboard } from './Leaderboard';
 import { MainMenu } from './MainMenu';
 import { Cell } from '../types/game';
 import Explosion from './Explosion';
+import { GAME_CONFIG } from '../config/gameConfig';
 
 // 👇 修改：加上 props 接收 isGuest
 export function Game({ isGuest }: { isGuest: boolean }) {
@@ -28,7 +29,9 @@ export function Game({ isGuest }: { isGuest: boolean }) {
     resumeGame,
     attemptSwap,
     setGameState,
-    debugLog
+    debugLog,
+    removedCells,
+    setRemovedCells
   } = useGame();
 
   const handleCellInteraction = useCallback((from: Cell, to: Cell) => {
@@ -64,6 +67,17 @@ export function Game({ isGuest }: { isGuest: boolean }) {
       { x, y, size, id: Date.now() + Math.random() }
     ]);
   }
+
+  React.useEffect(() => {
+    if (removedCells && removedCells.length > 0) {
+      removedCells.forEach(cell => {
+        const x = cell.col * GAME_CONFIG.CELL_SIZE;
+        const y = cell.row * GAME_CONFIG.CELL_SIZE;
+        triggerExplosion(x, y, GAME_CONFIG.CELL_SIZE);
+      });
+      setRemovedCells([]); // 清空，防止重复
+    }
+  }, [removedCells, setRemovedCells, triggerExplosion]);
 
   // 视图切换
   if (currentView === 'menu') {
