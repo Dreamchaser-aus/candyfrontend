@@ -21,10 +21,10 @@ export function GameStats({ highScore, timeLeft, movesLeft }: GameStatsProps) {
           <div className="font-bold text-lg">{lastScore}</div>
         </div>
       </div>
-      */}
+      
 
       <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-3 rounded-2xl flex-1">
-        {/*
+        
         <Award className="text-orange-300" size={20} />
         <div className="text-white">
           <div className="text-xs opacity-80">High Score</div>
