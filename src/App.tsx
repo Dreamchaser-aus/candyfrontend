@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Game } from './components/Game';
 import { API_BASE_URL } from './config/gameConfig';
+import { useTranslation } from 'react-i18next'; // 1️⃣ 导入
+// 若未设置请先 npm i react-i18next i18next
 
 function App() {
   const [telegramUser, setTelegramUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isBound, setIsBound] = useState<boolean | null>(null);
+
+  const { t, i18n } = useTranslation(); // 2️⃣ 获取t和i18n对象
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
@@ -23,17 +27,29 @@ function App() {
     }
   }, []);
 
+  // 3️⃣ 可选：提供切换按钮
+  const LangSwitcher = () => (
+    <div style={{ textAlign: 'right', padding: '8px 16px' }}>
+      <button onClick={() => i18n.changeLanguage('zh')} style={{ marginRight: 8 }}>中文</button>
+      <button onClick={() => i18n.changeLanguage('en')}>English</button>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div style={{ color: '#fff', textAlign: 'center', marginTop: 50 }}>加载中...</div>
+      <div style={{ color: '#fff', textAlign: 'center', marginTop: 50 }}>
+        <LangSwitcher />
+        {t('loading')}
+      </div>
     );
   }
 
   if (!telegramUser) {
     return (
       <div style={{ color: '#fff', textAlign: 'center', marginTop: 80 }}>
-        <div style={{ fontSize: 22, marginBottom: 16 }}>请在 <b>Telegram 客户端</b> 内通过 Bot 按钮进入游戏</div>
-        <div>不能直接浏览器访问！</div>
+        <LangSwitcher />
+        <div style={{ fontSize: 22, marginBottom: 16 }} dangerouslySetInnerHTML={{ __html: t('not_in_telegram') }} />
+        <div>{t('not_browser')}</div>
       </div>
     );
   }
@@ -41,20 +57,26 @@ function App() {
   if (isBound === false) {
     return (
       <div style={{ color: '#fff', textAlign: 'center', marginTop: 80 }}>
-        <div style={{ fontSize: 22, marginBottom: 16 }}>请先在 Telegram Bot 绑定手机号！</div>
+        <LangSwitcher />
+        <div style={{ fontSize: 22, marginBottom: 16 }}>{t('not_bound')}</div>
         <a
           href="https://t.me/candycrushvite_bot?start=bind"
           target="_blank"
           style={{ color: '#3cf', fontSize: 20, fontWeight: 'bold' }}
           rel="noopener noreferrer"
         >
-          👉 点此去绑定
+          {t('go_bind')}
         </a>
       </div>
     );
   }
 
-  return <Game telegramUser={telegramUser} />;
+  return (
+    <>
+      <LangSwitcher />
+      <Game telegramUser={telegramUser} />
+    </>
+  );
 }
 
 export default App;
