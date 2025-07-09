@@ -8,10 +8,12 @@ import { GameOverModal } from './GameOverModal';
 import { Leaderboard } from './Leaderboard';
 import { MainMenu } from './MainMenu';
 import { Cell } from '../types/game';
+import Explosion from './Explosion';
 
 // 👇 修改：加上 props 接收 isGuest
 export function Game({ isGuest }: { isGuest: boolean }) {
   const [currentView, setCurrentView] = useState<'menu' | 'game' | 'leaderboard' | 'settings' | 'howto'>('menu');
+  const [explosions, setExplosions] = useState<{ x: number, y: number, size: number, id: number }[]>([]);
 
   // 注意：isGuest 不再从 useGame 取，而是由 App 传入
   const {
@@ -55,6 +57,13 @@ export function Game({ isGuest }: { isGuest: boolean }) {
       pauseGame();
     }
   }, [gameState.gameActive, pauseGame]);
+
+    function triggerExplosion(x: number, y: number, size: number = 48) {
+    setExplosions(list => [
+      ...list,
+      { x, y, size, id: Date.now() + Math.random() }
+    ]);
+  }
 
   // 视图切换
   if (currentView === 'menu') {
@@ -179,6 +188,7 @@ export function Game({ isGuest }: { isGuest: boolean }) {
           onCellInteraction={handleCellInteraction}
           onCellSelect={handleCellSelect}
           onDragStart={handleDragStart}
+          triggerExplosion={triggerExplosion}
         />
         
         <GameOverModal
@@ -206,6 +216,17 @@ export function Game({ isGuest }: { isGuest: boolean }) {
           >
             {debugLog}
           </div>
+        )}
+        {explosions.map(e =>
+          <Explosion
+            key={e.id}
+            x={e.x}
+            y={e.y}
+            size={e.size}
+            onFinish={() =>
+              setExplosions(list => list.filter(i => i.id !== e.id))
+            }
+          />
         )}
       </div> {/* 这是 bg-gray-800/90 那个div的结尾 */}
     </div>
