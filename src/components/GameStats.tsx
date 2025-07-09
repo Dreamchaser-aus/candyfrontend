@@ -7,7 +7,7 @@ interface GameStatsProps {
   movesLeft: number;
 }
 
-export function GameStats({ gameHistory, timeLeft, movesLeft }: GameStatsProps) {
+export function GameStats({ highScore, timeLeft, movesLeft }: GameStatsProps) {
  
 
   return (
