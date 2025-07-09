@@ -1,0 +1,7 @@
+{
+  "welcome": "Welcome to Crypto Match-3 Game!",
+  "bind_phone": "Please bind your phone in the Telegram Bot first!",
+  "go_bind": "👉 Click here to bind",
+  "loading": "Loading...",
+  "not_in_tg": "Please open this game via Telegram Bot button, not browser!"
+}
