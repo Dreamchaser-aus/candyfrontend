@@ -341,6 +341,43 @@ export function useGame() {
         );
         
         console.log(`💣 Color bomb will remove ${uniqueCells.length} cells`);
+        if (uniqueCells.length > 0) {
+          setRemovedCells(uniqueCells); // 先高亮显示动画
+
+          setTimeout(() => {
+            setGameState(prev => {
+              let newGrid = prev.grid.map(row => [...row]);
+              let newSpecialGrid = prev.specialCandies.map(row => [...row]);
+              let newScore = prev.score;
+
+              uniqueCells.forEach(cell => {
+                if (newGrid[cell.row][cell.col] !== null) {
+                  newGrid[cell.row][cell.col] = null;
+                  newSpecialGrid[cell.row][cell.col] = { type: 'normal', color: 0 };
+                  newScore += GAME_CONFIG.POINTS_PER_BLOCK * 3; // 三倍积分
+                }
+              });
+
+              setRemovedCells([]); // 清除高亮
+
+              setTimeout(() => processCascade(), 150); // 触发连锁消除
+
+              return {
+                ...prev,
+                grid: newGrid,
+                specialCandies: newSpecialGrid,
+                score: newScore,
+                movesLeft: prev.movesLeft - 1,
+                selectedCell: null,
+                dragStart: null,
+                fallingCandies: []
+              };
+            });
+          }, 300); // 300ms 动画时间，根据你的动画时长调整
+
+          return prev; // 返回旧状态，防止提前刷新棋盘覆盖动画
+        }
+
         
         // Remove cells and calculate score
         let newScore = prev.score;
