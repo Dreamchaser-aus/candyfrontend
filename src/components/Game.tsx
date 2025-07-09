@@ -8,7 +8,6 @@ import { GameOverModal } from './GameOverModal';
 import { Leaderboard } from './Leaderboard';
 import { MainMenu } from './MainMenu';
 import { Cell } from '../types/game';
-import Explosion from './Explosion';
 import { GAME_CONFIG } from '../config/gameConfig';
 
 // 👇 修改：加上 props 接收 isGuest
@@ -22,7 +21,6 @@ export function Game({ isGuest }: { isGuest: boolean }) {
     userData,
     userProfile,
     gameResponse,
-    // isGuest, // ❌ 删掉这里
     initGame,
     startGame,
     pauseGame,
@@ -61,13 +59,15 @@ export function Game({ isGuest }: { isGuest: boolean }) {
     }
   }, [gameState.gameActive, pauseGame]);
 
-    function triggerExplosion(x: number, y: number, size: number = 48) {
+  // 触发爆炸动画
+  function triggerExplosion(x: number, y: number, size: number = 48) {
     setExplosions(list => [
       ...list,
       { x, y, size, id: Date.now() + Math.random() }
     ]);
   }
 
+  // 监听 removedCells，触发爆炸
   React.useEffect(() => {
     if (removedCells && removedCells.length > 0) {
       removedCells.forEach(cell => {
@@ -77,7 +77,7 @@ export function Game({ isGuest }: { isGuest: boolean }) {
       });
       setRemovedCells([]); // 清空，防止重复
     }
-  }, [removedCells, setRemovedCells, triggerExplosion]);
+  }, [removedCells, setRemovedCells]);
 
   // 视图切换
   if (currentView === 'menu') {
@@ -173,15 +173,15 @@ export function Game({ isGuest }: { isGuest: boolean }) {
         >
           ← Back to Menu
         </button>
-        
-        <GameHeader 
-          userData={userData} 
+
+        <GameHeader
+          userData={userData}
           userProfile={userProfile}
           gameResponse={gameResponse}
           isGuest={isGuest}
         />
-        
-        <GameStats 
+
+        <GameStats
           gameHistory={gameState.gameHistory || []}
           timeLeft={gameState.timeLeft}
           movesLeft={gameState.movesLeft}
@@ -196,15 +196,17 @@ export function Game({ isGuest }: { isGuest: boolean }) {
           onRestart={handleRestart}
           disabled={!userProfile || userProfile.token === 0}
         />
-        
+
         <GameCanvas
           gameState={gameState}
           onCellInteraction={handleCellInteraction}
           onCellSelect={handleCellSelect}
           onDragStart={handleDragStart}
           triggerExplosion={triggerExplosion}
+          explosions={explosions}
+          onExplosionFinish={id => setExplosions(list => list.filter(e => e.id !== id))}
         />
-        
+
         <GameOverModal
           isOpen={!gameState.gameActive && gameState.score > 0}
           score={gameState.score}
@@ -230,17 +232,6 @@ export function Game({ isGuest }: { isGuest: boolean }) {
           >
             {debugLog}
           </div>
-        )}
-        {explosions.map(e =>
-          <Explosion
-            key={e.id}
-            x={e.x}
-            y={e.y}
-            size={e.size}
-            onFinish={() =>
-              setExplosions(list => list.filter(i => i.id !== e.id))
-            }
-          />
         )}
       </div> {/* 这是 bg-gray-800/90 那个div的结尾 */}
     </div>
