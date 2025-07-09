@@ -2,14 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { Game } from './components/Game';
 import { API_BASE_URL } from './config/gameConfig';
 import { useTranslation } from 'react-i18next';
-// import LanguageSwitcher from './components/LanguageSwitcher'; // 可以删掉这行
+import LanguageSwitcher from './components/LanguageSwitcher';
 
 function App() {
   const [telegramUser, setTelegramUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isBound, setIsBound] = useState<boolean | null>(null);
+  const [showLangModal, setShowLangModal] = useState(false);
 
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
@@ -27,37 +28,69 @@ function App() {
     }
   }, []);
 
-  // 切换语言按钮
-  const LangSwitcher = () => (
-    <div style={{ textAlign: 'right', padding: '8px 16px' }}>
+  // 主界面按钮区域，可以把这个放到Settings按钮下方
+  const MainButtons = () => (
+    <div style={{ textAlign: 'center', margin: '20px 0' }}>
+      {/* 你原有的按钮，比如设置/排行榜按钮 */}
       <button
-        onClick={() => i18n.changeLanguage('zh')}
+        className="btn"
+        onClick={() => setShowLangModal(true)}
         style={{
-          marginRight: 8,
-          background: 'none',
+          marginTop: 12,
+          background: '#282c34',
+          color: '#fff',
           border: 'none',
-          color: i18n.language === 'zh' ? '#000' : '#888',
-          fontWeight: i18n.language === 'zh' ? 'bold' : 'normal',
+          padding: '8px 18px',
+          borderRadius: 8,
           cursor: 'pointer'
         }}
       >
-        中文
-      </button>
-      <button
-        onClick={() => i18n.changeLanguage('en')}
-        style={{
-          background: 'none',
-          border: 'none',
-          color: i18n.language === 'en' ? '#000' : '#888',
-          fontWeight: i18n.language === 'en' ? 'bold' : 'normal',
-          cursor: 'pointer'
-        }}
-      >
-        English
+        🌏 {t('Choose Language') || 'Choose Language'}
       </button>
     </div>
   );
 
+  // 语言切换弹窗
+  const LangModal = () => (
+    showLangModal && (
+      <div
+        style={{
+          position: 'fixed',
+          left: 0, top: 0, width: '100vw', height: '100vh',
+          background: 'rgba(0,0,0,0.4)',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+        }}
+        onClick={() => setShowLangModal(false)}
+      >
+        <div
+          style={{ background: '#fff', borderRadius: 10, padding: 24, minWidth: 220 }}
+          onClick={e => e.stopPropagation()}
+        >
+          <h3 style={{ marginBottom: 20, color: '#333', textAlign: 'center' }}>
+            {t('Choose Language') || 'Choose Language'}
+          </h3>
+          <LanguageSwitcher />
+          <button
+            onClick={() => setShowLangModal(false)}
+            style={{
+              marginTop: 24,
+              display: 'block',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              padding: '6px 18px',
+              borderRadius: 6,
+              background: '#282c34',
+              color: '#fff',
+              border: 'none'
+            }}
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    )
+  );
+  
   if (loading) {
     return (
       <div style={{ color: '#fff', textAlign: 'center', marginTop: 50 }}>
