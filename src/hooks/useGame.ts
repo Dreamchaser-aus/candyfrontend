@@ -221,7 +221,6 @@ export function useGame() {
         console.log('🔍 Checking for matches...');
         const { matches, specialCandies: newSpecialCandies } = findSpecialMatches(prev.grid, GAME_CONFIG.GRID_SIZE);
 
-        setDebugLog(`判定 matches: ${matches.length}, 例如首格: (${matches[0]?.row},${matches[0]?.col})`);
 
         console.log('当前棋盘：', prev.grid);
         console.log('判定 matches:', matches);
