@@ -27,6 +27,25 @@ export function useGame() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [debugLog, setDebugLog] = useState('');
   const [removedCells, setRemovedCells] = useState<{ row: number; col: number }[]>([]);
+    
+  // 👇 状态区（和你的其他useState并列放即可）
+  type FallDistanceMap = { [key: string]: number };
+  const [fallDistanceMap, setFallDistanceMap] = useState<FallDistanceMap>({});
+
+    function computeFallDistance(grid: (number | null)[][]) {
+    const map: { [key: string]: number } = {};
+    for (let col = 0; col < GAME_CONFIG.GRID_SIZE; col++) {
+      let drop = 0;
+      for (let row = GAME_CONFIG.GRID_SIZE - 1; row >= 0; row--) {
+        if (grid[row][col] === null) {
+          drop++;
+        } else if (drop > 0) {
+          map[`${row}-${col}`] = drop;
+        }
+      }
+    }
+    return map;
+  }
 
 const initializeGrid = useCallback(() => {
   const grid: (number | null)[][] = [];
@@ -276,7 +295,7 @@ const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandi
 
   // Start the cascade
   setTimeout(processStep, 200);
-}, [applyGravityAndFill, forceCompleteGrid]);
+}, [applyGravityAndFill, forceCompleteGrid, computeFallDistance]);
 
  const attemptSwap = useCallback((cell1: Cell, cell2: Cell) => {
   if (gameState.animating) {
@@ -543,5 +562,7 @@ const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandi
     debugLog,
     removedCells,
     setRemovedCells,
+    fallDistanceMap,
+    setFallDistanceMap
   };
 }
