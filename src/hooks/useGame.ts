@@ -218,84 +218,90 @@ const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandi
   return { newGrid: finalGrid, newSpecialGrid: finalSpecialGrid };
 }, [forceCompleteGrid]);
   // SIMPLIFIED CASCADE SYSTEM
-  const processCascade = useCallback(() => {
-  console.log('🌊 Starting simplified cascade system...');
+const processCascade = useCallback(() => {
+  console.log('🌊 Starting animated cascade system...');
   setGameState(prev => ({ ...prev, animating: true, fallingCandies: [] }));
 
+  // 动画主流程
   const processStep = () => {
     setGameState(prev => {
-      console.log('🔍 Checking for matches...');
-      // 这里返回同时包含 matches 和 newSpecialCandies
       const { matches, specialCandies: newSpecialCandies } = findSpecialMatches(prev.grid, GAME_CONFIG.GRID_SIZE);
 
       if (matches.length === 0) {
-        console.log('✅ No more matches found, cascade complete');
-        // FINAL SAFETY CHECK: Ensure grid is completely filled
-        const { newGrid: safeGrid, newSpecialGrid: safeSpecialGrid } = forceCompleteGrid(prev.grid, prev.specialCandies);
-
+        // 动画结束
+        setFallDistanceMap({});
         return {
           ...prev,
-          grid: safeGrid,
-          specialCandies: safeSpecialGrid,
           animating: false,
           fallingCandies: []
         };
       }
 
-      console.log(`💥 Found ${matches.length} matches, ${newSpecialCandies.length} special candies`);
-
-      const newGrid = prev.grid.map(row => [...row]);
-      const newSpecialGrid = prev.specialCandies.map(row => [...row]);
-      let newScore = prev.score;
-
-      // Remove matched cells, 保留特殊糖果
+      // 1. 先把所有要消除的位置设为 null（但不立即掉落），用于计算掉落距离
+      const tempGrid = prev.grid.map(row => [...row]);
       matches.forEach(match => {
-        const special = newSpecialCandies.find(
-          s => s.row === match.row && s.col === match.col
-        );
-        if (special) {
-          // 生成特殊糖果，保留这个格子的 special 类型
-          newSpecialGrid[match.row][match.col] = {
-            type: special.type,
-            color: newGrid[match.row][match.col]!
-          };
-          // 颜色可以不变，也可以设置特殊颜色
-        } else {
-          // 普通格子消除
-          newGrid[match.row][match.col] = null;
-          newSpecialGrid[match.row][match.col] = { type: 'normal', color: 0 };
-        }
-        newScore += GAME_CONFIG.POINTS_PER_BLOCK;
+        tempGrid[match.row][match.col] = null;
       });
 
-      if (matches.length > 0) {
-        setRemovedCells(matches);
-        console.log('setRemovedCells: ', matches);
-      }
+      // 2. 计算掉落动画映射
+      const fallMap = computeFallDistance(tempGrid);
+      setFallDistanceMap(fallMap);
 
-      // Apply gravity and fill immediately
-      const { newGrid: filledGrid, newSpecialGrid: filledSpecialGrid } =
-        applyGravityAndFill(newGrid, newSpecialGrid);
+      // 3. 动画期间不改变棋盘，仅做动画
+      setTimeout(() => {
+        setFallDistanceMap({}); // 动画结束，清空动画映射
 
-      console.log(`📊 Score increased by ${newScore - prev.score} points`);
+        setGameState(prev2 => {
+          const newGrid = prev2.grid.map(row => [...row]);
+          const newSpecialGrid = prev2.specialCandies.map(row => [...row]);
+          let newScore = prev2.score;
 
-      const newState = {
-        ...prev,
-        grid: filledGrid,
-        specialCandies: filledSpecialGrid,
-        score: newScore,
-        fallingCandies: []
-      };
+          // 先执行特殊糖果生成
+          matches.forEach(match => {
+            const special = newSpecialCandies.find(
+              s => s.row === match.row && s.col === match.col
+            );
+            if (special) {
+              newSpecialGrid[match.row][match.col] = {
+                type: special.type,
+                color: newGrid[match.row][match.col]!
+              };
+            } else {
+              newGrid[match.row][match.col] = null;
+              newSpecialGrid[match.row][match.col] = { type: 'normal', color: 0 };
+            }
+            newScore += GAME_CONFIG.POINTS_PER_BLOCK;
+          });
 
-      // Continue cascade after a short delay
-      setTimeout(processStep, 500);
-      return newState;
+          if (matches.length > 0) {
+            setRemovedCells(matches);
+          }
+
+          // 正式填充掉落
+          const { newGrid: filledGrid, newSpecialGrid: filledSpecialGrid } =
+            applyGravityAndFill(newGrid, newSpecialGrid);
+
+          // 连锁递归
+          setTimeout(processStep, 100); // 连锁消除间隔
+
+          return {
+            ...prev2,
+            grid: filledGrid,
+            specialCandies: filledSpecialGrid,
+            score: newScore,
+            fallingCandies: []
+          };
+        });
+      }, 300); // 动画时长 300ms
+
+      // 只做动画，棋盘内容此时不动
+      return prev;
     });
   };
 
-  // Start the cascade
-  setTimeout(processStep, 200);
-}, [applyGravityAndFill, forceCompleteGrid, computeFallDistance]);
+  // 开始
+  processStep();
+}, [applyGravityAndFill, computeFallDistance]);
 
  const attemptSwap = useCallback((cell1: Cell, cell2: Cell) => {
   if (gameState.animating) {
