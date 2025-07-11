@@ -171,7 +171,10 @@ export function GameCanvas({
     for (let row = 0; row < GAME_CONFIG.GRID_SIZE; row++) {
       for (let col = 0; col < GAME_CONFIG.GRID_SIZE; col++) {
         const x = col * GAME_CONFIG.CELL_SIZE;
-        const y = row * GAME_CONFIG.CELL_SIZE;
+        
+        const drop = gameState.fallDistanceMap?.[`${row}-${col}`] || 0;
+        const animY = drop * GAME_CONFIG.CELL_SIZE;
+        const y = row * GAME_CONFIG.CELL_SIZE + animY;
 
         ctx.fillStyle = 'rgba(255,255,255,0.05)';
         ctx.fillRect(x, y, GAME_CONFIG.CELL_SIZE, GAME_CONFIG.CELL_SIZE);
