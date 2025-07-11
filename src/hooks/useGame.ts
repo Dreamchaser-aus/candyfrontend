@@ -154,57 +154,40 @@ const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandi
   console.log('🌊 Applying enhanced gravity and immediate fill...');
 
   const newGrid = grid.map(row => [...row]);
-  const newSpecialGrid = specialCandies.map(row => [...row]);
+  const newSpecialGrid = specialCandies.map(row => row.map(s => ({ ...s }))); // 深拷贝每个special对象！
 
-  // Process each column
+  // 遍历每一列
   for (let col = 0; col < GAME_CONFIG.GRID_SIZE; col++) {
-    console.log(`🔄 Processing column ${col}...`);
-    // Collect all existing candies from bottom to top
-    const existingCandies: Array<{
-      candy: number;
-      special: SpecialCandy;
-    }> = [];
-
+    // 1. 收集现有糖果（包括special属性）
+    const stack: { color: number, special: SpecialCandy }[] = [];
     for (let row = GAME_CONFIG.GRID_SIZE - 1; row >= 0; row--) {
       if (newGrid[row][col] !== null) {
-        existingCandies.push({
-          candy: newGrid[row][col]!,
-          special: newSpecialGrid[row][col]
+        stack.push({
+          color: newGrid[row][col]!,
+          special: { ...newSpecialGrid[row][col] }
         });
       }
     }
 
-    console.log(`  📦 Found ${existingCandies.length} existing candies in column ${col}`);
-
-    // Clear the entire column
-    for (let row = 0; row < GAME_CONFIG.GRID_SIZE; row++) {
-      newGrid[row][col] = null;
+    // 2. 从底部开始“掉落”原有糖果+special
+    let fillRow = GAME_CONFIG.GRID_SIZE - 1;
+    for (const item of stack) {
+      newGrid[fillRow][col] = item.color;
+      newSpecialGrid[fillRow][col] = { ...item.special };
+      fillRow--;
     }
 
-    // Place existing candies at bottom
-    existingCandies.forEach((item, index) => {
-      const targetRow = GAME_CONFIG.GRID_SIZE - 1 - index;
-      newGrid[targetRow][col] = item.candy;
-      newSpecialGrid[targetRow][col] = item.special;
-      console.log(`  ⬇️ Placed existing candy at row ${targetRow}`);
-    });
-
-    // Fill remaining spaces with new candies
-    const emptySpaces = GAME_CONFIG.GRID_SIZE - existingCandies.length;
-    console.log(`  🆕 Filling ${emptySpaces} empty spaces in column ${col}`);
-
-    for (let i = 0; i < emptySpaces; i++) {
+    // 3. 填充剩余空格，只有新生成的才是normal（避免覆盖special糖果）
+    for (let row = fillRow; row >= 0; row--) {
       const newColor = Math.floor(Math.random() * GAME_CONFIG.COLORS.length);
-      const targetRow = i;
-      if (newGrid[targetRow][col] === null) {
-        newGrid[targetRow][col] = newColor;
-        newSpecialGrid[targetRow][col] = { type: 'normal', color: newColor };
-        console.log(`  ✨ Filled row ${targetRow} with new candy (color ${newColor})`);
-      }
+      newGrid[row][col] = newColor;
+      newSpecialGrid[row][col] = { type: 'normal', color: newColor };
+      // 如果有特殊需求可以在此添加动画等
+      console.log(`  ✨ Filled (${row},${col}) with new normal candy color ${newColor}`);
     }
-  } // <--- 这里把 for (let col = 0; ... ) { ... } 结束
+  }
 
-  // CRITICAL: Force complete any remaining empty spaces
+  // 最后安全兜底，保证每格都不是null
   const { newGrid: finalGrid, newSpecialGrid: finalSpecialGrid } = forceCompleteGrid(newGrid, newSpecialGrid);
 
   console.log('🌊 Gravity and fill complete - grid is now 100% filled');
