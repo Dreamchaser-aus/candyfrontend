@@ -200,85 +200,83 @@ const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandi
 }, [forceCompleteGrid]);
   // SIMPLIFIED CASCADE SYSTEM
   const processCascade = useCallback(() => {
-    console.log('🌊 Starting simplified cascade system...');
-    setGameState(prev => ({ ...prev, animating: true, fallingCandies: [] }));
-    
-    const processStep = () => {
-      setGameState(prev => {
-        console.log('🔍 Checking for matches...');
-        const { matches, specialCandies: newSpecialCandies } = findSpecialMatches(prev.grid, GAME_CONFIG.GRID_SIZE);
+  console.log('🌊 Starting simplified cascade system...');
+  setGameState(prev => ({ ...prev, animating: true, fallingCandies: [] }));
 
+  const processStep = () => {
+    setGameState(prev => {
+      console.log('🔍 Checking for matches...');
+      // 这里返回同时包含 matches 和 newSpecialCandies
+      const { matches, specialCandies: newSpecialCandies } = findSpecialMatches(prev.grid, GAME_CONFIG.GRID_SIZE);
 
-        console.log('当前棋盘：', prev.grid);
-        console.log('判定 matches:', matches);
-        console.log('准备消除 matches:', matches.map(m => `(${m.row},${m.col})`));
-        
-        if (matches.length === 0) {
-          console.log('✅ No more matches found, cascade complete');
-          
-          // FINAL SAFETY CHECK: Ensure grid is completely filled
-          const { newGrid: safeGrid, newSpecialGrid: safeSpecialGrid } = forceCompleteGrid(prev.grid, prev.specialCandies);
-          
-          return { 
-            ...prev, 
-            grid: safeGrid,
-            specialCandies: safeSpecialGrid,
-            animating: false,
-            fallingCandies: []
-          };
-        }
+      if (matches.length === 0) {
+        console.log('✅ No more matches found, cascade complete');
+        // FINAL SAFETY CHECK: Ensure grid is completely filled
+        const { newGrid: safeGrid, newSpecialGrid: safeSpecialGrid } = forceCompleteGrid(prev.grid, prev.specialCandies);
 
-        console.log(`💥 Found ${matches.length} matches, ${newSpecialCandies.length} special candies`);
-
-        const newGrid = prev.grid.map(row => [...row]);
-        const newSpecialGrid = prev.specialCandies.map(row => [...row]);
-        let newScore = prev.score;
-
-        // Create special candies first
-        const specialPositions = new Set<string>();
-        newSpecialCandies.forEach(special => {
-          console.log(`🍭 Creating special candy: ${special.type} at (${special.row},${special.col})`);
-          newSpecialGrid[special.row][special.col] = {
-            type: special.type,
-            color: newGrid[special.row][special.col]!
-          };
-          specialPositions.add(`${special.row},${special.col}`);
-        });
-
-        // Remove matched cells (except special candy positions)
-        matches.forEach(match => {
-            newGrid[match.row][match.col] = null;
-            newScore += GAME_CONFIG.POINTS_PER_BLOCK;
-        });
-
-        if (matches.length > 0) {
-            setRemovedCells(matches);
-            console.log('setRemovedCells: ', matches);;
-        }
-
-        // Apply gravity and fill immediately
-        const { newGrid: filledGrid, newSpecialGrid: filledSpecialGrid } = 
-          applyGravityAndFill(newGrid, newSpecialGrid);
-
-        console.log(`📊 Score increased by ${newScore - prev.score} points`);
-
-        const newState = {
+        return {
           ...prev,
-          grid: filledGrid,
-          specialCandies: filledSpecialGrid,
-          score: newScore,
-          fallingCandies: [] // No falling animations, immediate fill
+          grid: safeGrid,
+          specialCandies: safeSpecialGrid,
+          animating: false,
+          fallingCandies: []
         };
+      }
 
-        // Continue cascade after a short delay
-        setTimeout(processStep, 500);
-        return newState;
+      console.log(`💥 Found ${matches.length} matches, ${newSpecialCandies.length} special candies`);
+
+      const newGrid = prev.grid.map(row => [...row]);
+      const newSpecialGrid = prev.specialCandies.map(row => [...row]);
+      let newScore = prev.score;
+
+      // Remove matched cells, 保留特殊糖果
+      matches.forEach(match => {
+        const special = newSpecialCandies.find(
+          s => s.row === match.row && s.col === match.col
+        );
+        if (special) {
+          // 生成特殊糖果，保留这个格子的 special 类型
+          newSpecialGrid[match.row][match.col] = {
+            type: special.type,
+            color: newGrid[match.row][match.col]!
+          };
+          // 颜色可以不变，也可以设置特殊颜色
+        } else {
+          // 普通格子消除
+          newGrid[match.row][match.col] = null;
+          newSpecialGrid[match.row][match.col] = { type: 'normal', color: 0 };
+        }
+        newScore += GAME_CONFIG.POINTS_PER_BLOCK;
       });
-    };
 
-    // Start the cascade
-    setTimeout(processStep, 200);
-  }, [applyGravityAndFill, forceCompleteGrid]);
+      if (matches.length > 0) {
+        setRemovedCells(matches);
+        console.log('setRemovedCells: ', matches);
+      }
+
+      // Apply gravity and fill immediately
+      const { newGrid: filledGrid, newSpecialGrid: filledSpecialGrid } =
+        applyGravityAndFill(newGrid, newSpecialGrid);
+
+      console.log(`📊 Score increased by ${newScore - prev.score} points`);
+
+      const newState = {
+        ...prev,
+        grid: filledGrid,
+        specialCandies: filledSpecialGrid,
+        score: newScore,
+        fallingCandies: []
+      };
+
+      // Continue cascade after a short delay
+      setTimeout(processStep, 500);
+      return newState;
+    });
+  };
+
+  // Start the cascade
+  setTimeout(processStep, 200);
+}, [applyGravityAndFill, forceCompleteGrid]);
 
  const attemptSwap = useCallback((cell1: Cell, cell2: Cell) => {
   if (gameState.animating) {
