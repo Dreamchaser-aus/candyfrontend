@@ -225,17 +225,20 @@ const processCascade = useCallback(() => {
     setGameState(prev => {
       const { matches, specialCandies: newSpecialCandies } = findSpecialMatches(prev.grid, GAME_CONFIG.GRID_SIZE);
 
-      // 1. 没有消除，终止递归
+      // 没有消除，终止递归，并再兜底补满一次
       if (matches.length === 0) {
         setFallDistanceMap({});
+        let { newGrid, newSpecialGrid } = applyGravityAndFill(prev.grid, prev.specialCandies);
         return {
           ...prev,
+          grid: newGrid,
+          specialCandies: newSpecialGrid,
           animating: false,
           fallingCandies: []
         };
       }
 
-      // 2. 动画处理阶段（和你原来一样）
+      // 2. 动画处理阶段
       const tempGrid = prev.grid.map(row => [...row]);
       matches.forEach(match => {
         tempGrid[match.row][match.col] = null;
@@ -243,7 +246,6 @@ const processCascade = useCallback(() => {
       const fallMap = computeFallDistance(tempGrid);
       setFallDistanceMap(fallMap);
 
-      // 3. 动画结束后，再次检查是否还可消除
       setTimeout(() => {
         setFallDistanceMap({});
         setGameState(prev2 => {
@@ -272,7 +274,6 @@ const processCascade = useCallback(() => {
           const { newGrid: filledGrid, newSpecialGrid: filledSpecialGrid } =
             applyGravityAndFill(newGrid, newSpecialGrid);
 
-          // *** 递归再次调用 processStep ***
           setTimeout(processStep, 300);
 
           return {
@@ -283,14 +284,12 @@ const processCascade = useCallback(() => {
             fallingCandies: []
           };
         });
-      }, 300); // 动画时长
+      }, 300);
 
-      // 只做动画，棋盘内容此时不动
       return prev;
     });
   };
 
-  // 调用入口
   processStep();
 }, [applyGravityAndFill, computeFallDistance]);
 
