@@ -175,15 +175,12 @@ const initializeGrid = useCallback(() => {
 
   // ENHANCED GRAVITY SYSTEM WITH IMMEDIATE FILL
 const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandies: SpecialCandy[][]) => {
-  console.log('🌊 Applying enhanced gravity and immediate fill...');
-
   const newGrid = grid.map(row => [...row]);
-  const newSpecialGrid = specialCandies.map(row => row.map(s => ({ ...s }))); // 深拷贝每个special对象！
+  const newSpecialGrid = specialCandies.map(row => row.map(s => ({ ...s })));
 
-  // 遍历每一列
+  // 每一列补全到底
   for (let col = 0; col < GAME_CONFIG.GRID_SIZE; col++) {
-    // 1. 收集现有糖果（包括special属性）
-    const stack: { color: number, special: SpecialCandy }[] = [];
+    let stack: { color: number, special: SpecialCandy }[] = [];
     for (let row = GAME_CONFIG.GRID_SIZE - 1; row >= 0; row--) {
       if (newGrid[row][col] !== null) {
         stack.push({
@@ -192,31 +189,34 @@ const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandi
         });
       }
     }
-
-    // 2. 从底部开始“掉落”原有糖果+special
+    // 重新落到底部
     let fillRow = GAME_CONFIG.GRID_SIZE - 1;
     for (const item of stack) {
       newGrid[fillRow][col] = item.color;
       newSpecialGrid[fillRow][col] = { ...item.special };
       fillRow--;
     }
-
-    // 3. 填充剩余空格，只有新生成的才是normal（避免覆盖special糖果）
+    // 剩余空位补新
     for (let row = fillRow; row >= 0; row--) {
       const newColor = Math.floor(Math.random() * GAME_CONFIG.COLORS.length);
       newGrid[row][col] = newColor;
       newSpecialGrid[row][col] = { type: 'normal', color: newColor };
-      // 如果有特殊需求可以在此添加动画等
-      console.log(`  ✨ Filled (${row},${col}) with new normal candy color ${newColor}`);
+    }
+  }
+  // 最后彻底兜底
+  for (let row = 0; row < GAME_CONFIG.GRID_SIZE; row++) {
+    for (let col = 0; col < GAME_CONFIG.GRID_SIZE; col++) {
+      if (newGrid[row][col] === null) {
+        const newColor = Math.floor(Math.random() * GAME_CONFIG.COLORS.length);
+        newGrid[row][col] = newColor;
+        newSpecialGrid[row][col] = { type: 'normal', color: newColor };
+      }
     }
   }
 
-  // 最后安全兜底，保证每格都不是null
-  const { newGrid: finalGrid, newSpecialGrid: finalSpecialGrid } = forceCompleteGrid(newGrid, newSpecialGrid);
+  return { newGrid, newSpecialGrid };
+}, []);
 
-  console.log('🌊 Gravity and fill complete - grid is now 100% filled');
-  return { newGrid: finalGrid, newSpecialGrid: finalSpecialGrid };
-}, [forceCompleteGrid]);
   // SIMPLIFIED CASCADE SYSTEM
 const processCascade = useCallback(() => {
   setGameState(prev => ({ ...prev, animating: true, fallingCandies: [] }));
