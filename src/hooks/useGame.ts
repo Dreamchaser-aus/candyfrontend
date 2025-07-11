@@ -28,21 +28,26 @@ export function useGame() {
   const [debugLog, setDebugLog] = useState('');
   const [removedCells, setRemovedCells] = useState<{ row: number; col: number }[]>([]);
 
-  const initializeGrid = useCallback(() => {
-    const grid: (number | null)[][] = [];
-    const specialCandies: SpecialCandy[][] = [];
-    
-    for (let row = 0; row < GAME_CONFIG.GRID_SIZE; row++) {
-      grid[row] = [];
-      specialCandies[row] = [];
-      for (let col = 0; col < GAME_CONFIG.GRID_SIZE; col++) {
+const initializeGrid = useCallback(() => {
+  const grid: (number | null)[][] = [];
+  const specialCandies: SpecialCandy[][] = [];
+
+  // --- 方式1：直接造一个5连横（第0行第0-4格全1，其它随机）
+  for (let row = 0; row < GAME_CONFIG.GRID_SIZE; row++) {
+    grid[row] = [];
+    specialCandies[row] = [];
+    for (let col = 0; col < GAME_CONFIG.GRID_SIZE; col++) {
+      if (row === 0 && col < 5) {
+        grid[row][col] = 1; // 5连
+      } else {
         grid[row][col] = Math.floor(Math.random() * GAME_CONFIG.COLORS.length);
-        specialCandies[row][col] = { type: 'normal', color: grid[row][col]! };
       }
+      specialCandies[row][col] = { type: 'normal', color: grid[row][col]! };
     }
-    removeInitialMatches(grid, GAME_CONFIG.GRID_SIZE, GAME_CONFIG.COLORS);
-    return { grid, specialCandies };
-  }, []);
+  }
+  // 不需要调用 removeInitialMatches，这样 5 连一定会在开局出现
+  return { grid, specialCandies };
+}, []);
 
   const initGame = useCallback(() => {
     const { grid, specialCandies } = initializeGrid();
