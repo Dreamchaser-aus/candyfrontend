@@ -280,206 +280,181 @@ const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandi
     setTimeout(processStep, 200);
   }, [applyGravityAndFill, forceCompleteGrid]);
 
-  const attemptSwap = useCallback((cell1: Cell, cell2: Cell) => {
-    if (gameState.animating) {
-      console.log('动画未结束，禁止操作！');
-      return;
-    }
-    console.log(`🔄 Attempting swap: (${cell1.row},${cell1.col}) ↔ (${cell2.row},${cell2.col})`);
-    
-    if (!areAdjacent(cell1, cell2)) {
-      console.log('❌ Cells are not adjacent');
-      return;
-    }
-    
-    setGameState(prev => {
-      const newGrid = prev.grid.map(row => [...row]);
-      const newSpecialGrid = prev.specialCandies.map(row => [...row]);
-      
-      // Check if either cell has a special candy
-      const special1 = prev.specialCandies[cell1.row][cell1.col];
-      const special2 = prev.specialCandies[cell2.row][cell2.col];
-      
-      // SPECIAL CASE: Color bomb activation
-      if (special1.type === 'color-bomb' || special2.type === 'color-bomb') {
-        console.log('💣 COLOR BOMB ACTIVATION!');
-        let cellsToRemove: { row: number; col: number }[] = [];
-        
-        if (special1.type === 'color-bomb') {
-          // Color bomb removes all candies of the color it was swapped with
-          const targetColor = newGrid[cell2.row][cell2.col];
-          console.log(`💣 Color bomb at (${cell1.row},${cell1.col}) targeting color ${targetColor}`);
-          const removed = activateSpecialCandy(newGrid, newSpecialGrid, cell1.row, cell1.col, GAME_CONFIG.GRID_SIZE, targetColor);
-          cellsToRemove = cellsToRemove.concat(removed);
-        }
-        
-        if (special2.type === 'color-bomb') {
-          // Color bomb removes all candies of the color it was swapped with
-          const targetColor = newGrid[cell1.row][cell1.col];
-          console.log(`💣 Color bomb at (${cell2.row},${cell2.col}) targeting color ${targetColor}`);
-          const removed = activateSpecialCandy(newGrid, newSpecialGrid, cell2.row, cell2.col, GAME_CONFIG.GRID_SIZE, targetColor);
-          cellsToRemove = cellsToRemove.concat(removed);
-        }
-        
-        // Remove duplicate cells
-        const uniqueCells = cellsToRemove.filter((cell, index, self) => 
-          index === self.findIndex(c => c.row === cell.row && c.col === cell.col)
-        );
-        
-        console.log(`💣 Color bomb will remove ${uniqueCells.length} cells`);
-        if (uniqueCells.length > 0) {
-          setRemovedCells(uniqueCells); // 先高亮显示动画
+ const attemptSwap = useCallback((cell1: Cell, cell2: Cell) => {
+  if (gameState.animating) {
+    console.log('动画未结束，禁止操作！');
+    return;
+  }
+  console.log(`🔄 Attempting swap: (${cell1.row},${cell1.col}) ↔ (${cell2.row},${cell2.col})`);
 
-          setTimeout(() => {
-            setGameState(prev => {
-              let newGrid = prev.grid.map(row => [...row]);
-              let newSpecialGrid = prev.specialCandies.map(row => [...row]);
-              let newScore = prev.score;
+  if (!areAdjacent(cell1, cell2)) {
+    console.log('❌ Cells are not adjacent');
+    return;
+  }
 
-              uniqueCells.forEach(cell => {
-                if (newGrid[cell.row][cell.col] !== null) {
-                  newGrid[cell.row][cell.col] = null;
-                  newSpecialGrid[cell.row][cell.col] = { type: 'normal', color: 0 };
-                  newScore += GAME_CONFIG.POINTS_PER_BLOCK * 3; // 三倍积分
-                }
-              });
+  setGameState(prev => {
+    const newGrid = prev.grid.map(row => [...row]);
+    const newSpecialGrid = prev.specialCandies.map(row => [...row]);
 
-              setRemovedCells([]); // 清除高亮
+    // 获取两个位置的 special 类型
+    const special1 = prev.specialCandies[cell1.row][cell1.col];
+    const special2 = prev.specialCandies[cell2.row][cell2.col];
 
-              setTimeout(() => processCascade(), 150); // 触发连锁消除
+    // 1. Color bomb 逻辑（色球交换）
+    if (special1.type === 'color-bomb' || special2.type === 'color-bomb') {
+      let cellsToRemove: { row: number; col: number }[] = [];
 
-              return {
-                ...prev,
-                grid: newGrid,
-                specialCandies: newSpecialGrid,
-                score: newScore,
-                movesLeft: prev.movesLeft - 1,
-                selectedCell: null,
-                dragStart: null,
-                fallingCandies: []
-              };
+      if (special1.type === 'color-bomb') {
+        const targetColor = newGrid[cell2.row][cell2.col];
+        const removed = activateSpecialCandy(newGrid, newSpecialGrid, cell1.row, cell1.col, GAME_CONFIG.GRID_SIZE, targetColor);
+        cellsToRemove = cellsToRemove.concat(removed);
+      }
+      if (special2.type === 'color-bomb') {
+        const targetColor = newGrid[cell1.row][cell1.col];
+        const removed = activateSpecialCandy(newGrid, newSpecialGrid, cell2.row, cell2.col, GAME_CONFIG.GRID_SIZE, targetColor);
+        cellsToRemove = cellsToRemove.concat(removed);
+      }
+      // Remove duplicates
+      const uniqueCells = cellsToRemove.filter((cell, idx, self) =>
+        idx === self.findIndex(c => c.row === cell.row && c.col === cell.col)
+      );
+      if (uniqueCells.length > 0) {
+        setRemovedCells(uniqueCells);
+        setTimeout(() => {
+          setGameState(prev => {
+            let newGrid = prev.grid.map(row => [...row]);
+            let newSpecialGrid = prev.specialCandies.map(row => [...row]);
+            let newScore = prev.score;
+            uniqueCells.forEach(cell => {
+              if (newGrid[cell.row][cell.col] !== null) {
+                newGrid[cell.row][cell.col] = null;
+                newSpecialGrid[cell.row][cell.col] = { type: 'normal', color: 0 };
+                newScore += GAME_CONFIG.POINTS_PER_BLOCK * 3;
+              }
             });
-          }, 300); // 300ms 动画时间，根据你的动画时长调整
-
-          return prev; // 返回旧状态，防止提前刷新棋盘覆盖动画
-        }
-
-        
-        // Remove cells and calculate score
-        let newScore = prev.score;
-        uniqueCells.forEach(cell => {
-          if (newGrid[cell.row][cell.col] !== null) {
-            newGrid[cell.row][cell.col] = null;
-            newSpecialGrid[cell.row][cell.col] = { type: 'normal', color: 0 };
-            newScore += GAME_CONFIG.POINTS_PER_BLOCK * 3; // Color bomb gives triple points
-          }
-        });
-        
-        if (uniqueCells.length > 0) setRemovedCells(uniqueCells);
-        
-        const newState = {
-          ...prev,
-          grid: newGrid,
-          specialCandies: newSpecialGrid,
-          score: newScore,
-          movesLeft: prev.movesLeft - 1,
-          selectedCell: null,
-          dragStart: null,
-          fallingCandies: []
-        };
-        
-        setTimeout(() => processCascade(), 150);
-        return newState;
+            setRemovedCells([]);
+            setTimeout(() => processCascade(), 150);
+            return {
+              ...prev,
+              grid: newGrid,
+              specialCandies: newSpecialGrid,
+              score: newScore,
+              movesLeft: prev.movesLeft - 1,
+              selectedCell: null,
+              dragStart: null,
+              fallingCandies: []
+            };
+          });
+        }, 300);
+        return prev;
       }
-      
-      // Handle other special candy activation (striped, wrapped)
-      if (special1.type !== 'normal' || special2.type !== 'normal') {
-        console.log('🎆 Activating other special candies!');
-        let cellsToRemove: { row: number; col: number }[] = [];
-        
-        if (special1.type !== 'normal' && special1.type !== 'color-bomb') {
-          const removed = activateSpecialCandy(newGrid, newSpecialGrid, cell1.row, cell1.col, GAME_CONFIG.GRID_SIZE);
-          cellsToRemove = cellsToRemove.concat(removed);
+      let newScore = prev.score;
+      uniqueCells.forEach(cell => {
+        if (newGrid[cell.row][cell.col] !== null) {
+          newGrid[cell.row][cell.col] = null;
+          newSpecialGrid[cell.row][cell.col] = { type: 'normal', color: 0 };
+          newScore += GAME_CONFIG.POINTS_PER_BLOCK * 3;
         }
-        
-        if (special2.type !== 'normal' && special2.type !== 'color-bomb') {
-          const removed = activateSpecialCandy(newGrid, newSpecialGrid, cell2.row, cell2.col, GAME_CONFIG.GRID_SIZE);
-          cellsToRemove = cellsToRemove.concat(removed);
-        }
-        
-        // Remove duplicate cells
-        const uniqueCells = cellsToRemove.filter((cell, index, self) => 
-          index === self.findIndex(c => c.row === cell.row && c.col === cell.col)
-        );
-        
-        console.log(`🎆 Special candy activation will remove ${uniqueCells.length} cells`);
-        
-        // Remove cells and calculate score
-        let newScore = prev.score;
-        uniqueCells.forEach(cell => {
-          if (newGrid[cell.row][cell.col] !== null) {
-            newGrid[cell.row][cell.col] = null;
-            newSpecialGrid[cell.row][cell.col] = { type: 'normal', color: 0 };
-            newScore += GAME_CONFIG.POINTS_PER_BLOCK * 2;
-          }
-        });
-        
-        const newState = {
-          ...prev,
-          grid: newGrid,
-          specialCandies: newSpecialGrid,
-          score: newScore,
-          movesLeft: prev.movesLeft - 1,
-          selectedCell: null,
-          dragStart: null,
-          fallingCandies: []
-        };
-        
-        setTimeout(() => processCascade(), 150);
-        return newState;
+      });
+      if (uniqueCells.length > 0) setRemovedCells(uniqueCells);
+      const newState = {
+        ...prev,
+        grid: newGrid,
+        specialCandies: newSpecialGrid,
+        score: newScore,
+        movesLeft: prev.movesLeft - 1,
+        selectedCell: null,
+        dragStart: null,
+        fallingCandies: []
+      };
+      setTimeout(() => processCascade(), 150);
+      return newState;
+    }
+
+    // 2. 其它特殊糖果激活（横/竖/包裹等）
+    if (special1.type !== 'normal' || special2.type !== 'normal') {
+      let cellsToRemove: { row: number; col: number }[] = [];
+      if (special1.type !== 'normal' && special1.type !== 'color-bomb') {
+        const removed = activateSpecialCandy(newGrid, newSpecialGrid, cell1.row, cell1.col, GAME_CONFIG.GRID_SIZE);
+        cellsToRemove = cellsToRemove.concat(removed);
       }
-      
-      // Regular swap
+      if (special2.type !== 'normal' && special2.type !== 'color-bomb') {
+        const removed = activateSpecialCandy(newGrid, newSpecialGrid, cell2.row, cell2.col, GAME_CONFIG.GRID_SIZE);
+        cellsToRemove = cellsToRemove.concat(removed);
+      }
+      // Remove duplicates
+      const uniqueCells = cellsToRemove.filter((cell, idx, self) =>
+        idx === self.findIndex(c => c.row === cell.row && c.col === cell.col)
+      );
+      let newScore = prev.score;
+      uniqueCells.forEach(cell => {
+        if (newGrid[cell.row][cell.col] !== null) {
+          newGrid[cell.row][cell.col] = null;
+          newSpecialGrid[cell.row][cell.col] = { type: 'normal', color: 0 };
+          newScore += GAME_CONFIG.POINTS_PER_BLOCK * 2;
+        }
+      });
+      const newState = {
+        ...prev,
+        grid: newGrid,
+        specialCandies: newSpecialGrid,
+        score: newScore,
+        movesLeft: prev.movesLeft - 1,
+        selectedCell: null,
+        dragStart: null,
+        fallingCandies: []
+      };
+      setTimeout(() => processCascade(), 150);
+      return newState;
+    }
+
+    // 3. 普通消除：核心改动在这里
+    // 交换
+    const temp = newGrid[cell1.row][cell1.col];
+    newGrid[cell1.row][cell1.col] = newGrid[cell2.row][cell2.col];
+    newGrid[cell2.row][cell2.col] = temp;
+
+    const tempSpecial = newSpecialGrid[cell1.row][cell1.col];
+    newSpecialGrid[cell1.row][cell1.col] = newSpecialGrid[cell2.row][cell2.col];
+    newSpecialGrid[cell2.row][cell2.col] = tempSpecial;
+
+    // 找消除和特殊糖果
+    const { matches, specialCandies: newSpecialCandies } = findSpecialMatches(newGrid, GAME_CONFIG.GRID_SIZE);
+
+    // 关键：把新生成的特殊糖果信息写入 specialCandies 数组
+    newSpecialCandies.forEach(special => {
+      newSpecialGrid[special.row][special.col] = {
+        type: special.type,
+        color: newGrid[special.row][special.col]!
+      };
+    });
+
+    if (matches.length === 0) {
+      // 没消除，回退
       const temp = newGrid[cell1.row][cell1.col];
       newGrid[cell1.row][cell1.col] = newGrid[cell2.row][cell2.col];
       newGrid[cell2.row][cell2.col] = temp;
-      
       const tempSpecial = newSpecialGrid[cell1.row][cell1.col];
       newSpecialGrid[cell1.row][cell1.col] = newSpecialGrid[cell2.row][cell2.col];
       newSpecialGrid[cell2.row][cell2.col] = tempSpecial;
-      
-      // Check for matches
-      const { matches } = findSpecialMatches(newGrid, GAME_CONFIG.GRID_SIZE);
-      
-      if (matches.length === 0) {
-        console.log('❌ No matches found, reverting swap');
-        // No matches, swap back
-        const temp = newGrid[cell1.row][cell1.col];
-        newGrid[cell1.row][cell1.col] = newGrid[cell2.row][cell2.col];
-        newGrid[cell2.row][cell2.col] = temp;
-        
-        const tempSpecial = newSpecialGrid[cell1.row][cell1.col];
-        newSpecialGrid[cell1.row][cell1.col] = newSpecialGrid[cell2.row][cell2.col];
-        newSpecialGrid[cell2.row][cell2.col] = tempSpecial;
-        
-        return prev;
-      } else {
-        console.log('✅ Valid move! Found', matches.length, 'matches');
-        const newState = {
-          ...prev,
-          grid: newGrid,
-          specialCandies: newSpecialGrid,
-          movesLeft: prev.movesLeft - 1,
-          selectedCell: null,
-          dragStart: null,
-          fallingCandies: []
-        };
-        
-        setTimeout(() => processCascade(), 150);
-        return newState;
-      }
-    });
-  }, [processCascade]);
+      return prev;
+    } else {
+      // 有消除，推进游戏
+      console.log('✅ Valid move! Found', matches.length, 'matches');
+      const newState = {
+        ...prev,
+        grid: newGrid,
+        specialCandies: newSpecialGrid,
+        movesLeft: prev.movesLeft - 1,
+        selectedCell: null,
+        dragStart: null,
+        fallingCandies: []
+      };
+      setTimeout(() => processCascade(), 150);
+      return newState;
+    }
+  });
+}, [processCascade]);
 
   const startGame = useCallback(() => {
     if (!userProfile || userProfile.token <= 0) {
