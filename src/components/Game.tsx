@@ -185,6 +185,7 @@ export function Game({ isGuest }: { isGuest: boolean }) {
           highScore={userProfile?.high_score || 0}
           timeLeft={gameState.timeLeft}
           movesLeft={gameState.movesLeft}
+          score={gameState.score}
         />
 
         <GameControls
