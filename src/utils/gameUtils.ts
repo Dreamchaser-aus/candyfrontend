@@ -38,38 +38,46 @@ export function maskName(username?: string, phone?: string): string {
 }
 
 // types/game.ts 里应该有 Match 类型，没有就用 {row: number, col: number}
-export function findSpecialMatches(
-  grid: (number | null)[][],
-  gridSize: number
-): {
-  matches: { row: number; col: number }[];
+export interface Match {
+  row: number;
+  col: number;
+}
+export function findSpecialMatches(grid: (number | null)[][], gridSize: number): {
+  matches: Match[];
   specialCandies: { row: number; col: number; type: 'striped-h' | 'striped-v' | 'wrapped' | 'color-bomb' }[];
 } {
-  // --- 横向和纵向都要检测 ---
-  const matches: { row: number; col: number }[] = [];
+  const matches: Match[] = [];
   const specialCandies: { row: number; col: number; type: 'striped-h' | 'striped-v' | 'wrapped' | 'color-bomb' }[] = [];
+  const visited: boolean[][] = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
 
-  // 横向检测
+  // 记录所有格子的消除类型（方便T/L检测）
+  const mark: number[][] = Array.from({ length: gridSize }, () => Array(gridSize).fill(0));
+  // 1=横向，2=纵向，3=交叉
+
+  // 横向
   for (let row = 0; row < gridSize; row++) {
-    let col = 0;
-    while (col <= gridSize - 3) {
+    for (let col = 0; col <= gridSize - 3; ) {
       const color = grid[row][col];
       if (color !== null &&
-          grid[row][col + 1] === color &&
-          grid[row][col + 2] === color) {
-        // 找到一个横向3连，继续统计长度
+        grid[row][col + 1] === color &&
+        grid[row][col + 2] === color) {
+        // 统计连续长度
         let endCol = col + 3;
         while (endCol < gridSize && grid[row][endCol] === color) endCol++;
-        const length = endCol - col;
-        // 记录所有格子
+        const len = endCol - col;
+        // 标记横向
         for (let c = col; c < endCol; c++) {
           matches.push({ row, col: c });
+          mark[row][c] |= 1;
         }
-        // 4连/5连生成特殊糖果
-        if (length === 4) {
-          specialCandies.push({ row, col: col + 1, type: 'striped-h' });
-        } else if (length >= 5) {
-          specialCandies.push({ row, col: col + 2, type: 'color-bomb' });
+        // 特殊糖果生成
+        if (len === 4) {
+          const centerCol = Math.floor((col + endCol - 1) / 2);
+          specialCandies.push({ row, col: centerCol, type: 'striped-h' });
+        }
+        if (len >= 5) {
+          const centerCol = Math.floor((col + endCol - 1) / 2);
+          specialCandies.push({ row, col: centerCol, type: 'color-bomb' });
         }
         col = endCol;
       } else {
@@ -77,25 +85,30 @@ export function findSpecialMatches(
       }
     }
   }
-
-  // 纵向检测
+  // 纵向
   for (let col = 0; col < gridSize; col++) {
-    let row = 0;
-    while (row <= gridSize - 3) {
+    for (let row = 0; row <= gridSize - 3; ) {
       const color = grid[row][col];
       if (color !== null &&
-          grid[row + 1][col] === color &&
-          grid[row + 2][col] === color) {
+        grid[row + 1][col] === color &&
+        grid[row + 2][col] === color) {
+        // 统计连续长度
         let endRow = row + 3;
         while (endRow < gridSize && grid[endRow][col] === color) endRow++;
-        const length = endRow - row;
+        const len = endRow - row;
+        // 标记纵向
         for (let r = row; r < endRow; r++) {
           matches.push({ row: r, col });
+          mark[r][col] |= 2;
         }
-        if (length === 4) {
-          specialCandies.push({ row: row + 1, col, type: 'striped-v' });
-        } else if (length >= 5) {
-          specialCandies.push({ row: row + 2, col, type: 'color-bomb' });
+        // 特殊糖果生成
+        if (len === 4) {
+          const centerRow = Math.floor((row + endRow - 1) / 2);
+          specialCandies.push({ row: centerRow, col, type: 'striped-v' });
+        }
+        if (len >= 5) {
+          const centerRow = Math.floor((row + endRow - 1) / 2);
+          specialCandies.push({ row: centerRow, col, type: 'color-bomb' });
         }
         row = endRow;
       } else {
@@ -103,23 +116,37 @@ export function findSpecialMatches(
       }
     }
   }
-
-  // 检查T/L型组合，给包裹糖果
-  for (let row = 1; row < gridSize - 1; row++) {
-    for (let col = 1; col < gridSize - 1; col++) {
-      const color = grid[row][col];
-      if (color === null) continue;
-      // 判断是否同一颜色，并同时横+竖3连（中心点）
-      const hor = grid[row][col - 1] === color && grid[row][col + 1] === color;
-      const ver = grid[row - 1][col] === color && grid[row + 1][col] === color;
-      if (hor && ver) {
+  // T型/L型检测，横竖交叉的就是包裹
+  for (let row = 0; row < gridSize; row++) {
+    for (let col = 0; col < gridSize; col++) {
+      if ((mark[row][col] & 1) && (mark[row][col] & 2)) {
+        // 同时横纵交叉
         specialCandies.push({ row, col, type: 'wrapped' });
       }
     }
   }
 
-  // 返回
-  return { matches, specialCandies };
+  // 去重（有可能同一格子被标记多次）
+  const matchSet = new Set(matches.map(m => `${m.row}_${m.col}`));
+  const uniqueMatches = Array.from(matchSet).map(k => {
+    const [row, col] = k.split('_').map(Number);
+    return { row, col };
+  });
+
+  // 保证同一格只有一个特殊糖果（优先包裹>色球>条纹）
+  const uniqueSpecial: { [key: string]: any } = {};
+  for (const sp of specialCandies) {
+    const key = `${sp.row}_${sp.col}`;
+    // 包裹 > 色球 > 条纹
+    if (!uniqueSpecial[key] ||
+      (sp.type === 'wrapped' && uniqueSpecial[key].type !== 'wrapped') ||
+      (sp.type === 'color-bomb' && uniqueSpecial[key].type === 'striped-h' || uniqueSpecial[key].type === 'striped-v')) {
+      uniqueSpecial[key] = sp;
+    }
+  }
+  const resultSpecial = Object.values(uniqueSpecial);
+
+  return { matches: uniqueMatches, specialCandies: resultSpecial as any };
 }
 
 export function activateSpecialCandy(
