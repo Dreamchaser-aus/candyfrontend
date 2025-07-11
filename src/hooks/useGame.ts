@@ -356,7 +356,7 @@ const processCascade = useCallback(() => {
               }
             });
             setRemovedCells([]);
-            setTimeout(() => processCascade(), 150);
+            setTimeout(() => processCascade(), 300);
             return {
               ...prev,
               grid: newGrid,
@@ -390,7 +390,7 @@ const processCascade = useCallback(() => {
         dragStart: null,
         fallingCandies: []
       };
-      setTimeout(() => processCascade(), 150);
+      setTimeout(() => processCascade(), 300);
       return newState;
     }
 
@@ -427,7 +427,7 @@ const processCascade = useCallback(() => {
         dragStart: null,
         fallingCandies: []
       };
-      setTimeout(() => processCascade(), 150);
+      setTimeout(() => processCascade(), 300);
       return newState;
     }
 
@@ -473,7 +473,7 @@ const processCascade = useCallback(() => {
         dragStart: null,
         fallingCandies: []
       };
-      setTimeout(() => processCascade(), 150);
+      setTimeout(() => processCascade(), 300);
       return newState;
     }
   });
