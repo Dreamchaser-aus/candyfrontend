@@ -180,7 +180,6 @@ export function useGame() {
       // Clear the entire column
       for (let row = 0; row < GAME_CONFIG.GRID_SIZE; row++) {
         newGrid[row][col] = null;
-        newSpecialGrid[row][col] = { type: 'normal', color: 0 };
       }
 
       // Place existing candies at bottom
