@@ -197,10 +197,12 @@ export function useGame() {
       for (let i = 0; i < emptySpaces; i++) {
         const newColor = Math.floor(Math.random() * GAME_CONFIG.COLORS.length);
         const targetRow = i;
-        newGrid[targetRow][col] = newColor;
+
+        if (newGrid[targetRow][col] === null) {
+          newGrid[targetRow][col] = newColor;
         newSpecialGrid[targetRow][col] = { type: 'normal', color: newColor };
         console.log(`  ✨ Filled row ${targetRow} with new candy (color ${newColor})`);
-      }
+       }
     }
 
     // CRITICAL: Force complete any remaining empty spaces
