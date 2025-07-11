@@ -38,153 +38,22 @@ export function maskName(username?: string, phone?: string): string {
 }
 
 // 🎯 SIMPLE BULLETPROOF MATCH DETECTION - NO COMPLEX LOGIC
-export function findSpecialMatches(grid: (number | null)[][], gridSize: number): {
-  matches: Match[];
-  specialCandies: { row: number; col: number; type: 'striped-h' | 'striped-v' | 'wrapped' | 'color-bomb' }[];
-} {
-  console.log('🚀 SIMPLE BULLETPROOF MATCH DETECTION');
-  
-  // Debug: Print current grid
-  console.log('📋 Grid:');
-  for (let row = 0; row < gridSize; row++) {
-    const rowStr = grid[row].map(cell => cell === null ? 'X' : cell.toString()).join(' ');
-    console.log(`  ${row}: ${rowStr}`);
+newSpecialCandies.forEach(special => {
+  newSpecialGrid[special.row][special.col] = {
+    type: special.type,
+    color: newGrid[special.row][special.col]!
+  };
+  specialPositions.add(`${special.row},${special.col}`);
+});
+
+// Remove matched cells (except special candy positions)
+matches.forEach(match => {
+  // 如果是特殊糖果位置就不消除
+  if (!specialPositions.has(`${match.row},${match.col}`)) {
+    newGrid[match.row][match.col] = null;
   }
+});
 
-  const matches: Match[] = [];
-  const specialCandies: { row: number; col: number; type: 'striped-h' | 'striped-v' | 'wrapped' | 'color-bomb' }[] = [];
-
-  // 🔍 HORIZONTAL MATCHES - DEAD SIMPLE
-  console.log('🔍 Checking horizontal matches...');
-  for (let row = 0; row < gridSize; row++) {
-    for (let col = 0; col <= gridSize - 3; col++) {
-      const color1 = grid[row][col];
-      const color2 = grid[row][col + 1];
-      const color3 = grid[row][col + 2];
-      
-      // Simple check: are all 3 the same and not null?
-      if (color1 !== null && color1 === color2 && color2 === color3) {
-        console.log(`✅ HORIZONTAL: Row ${row}, Cols ${col}-${col+2}, Color ${color1}`);
-        
-        // Count total length of this match
-        let endCol = col + 3;
-        while (endCol < gridSize && grid[row][endCol] === color1) {
-          endCol++;
-        }
-        const matchLength = endCol - col;
-        
-        console.log(`  📏 Total length: ${matchLength}`);
-        
-        // Add all cells in this match
-        for (let c = col; c < endCol; c++) {
-          matches.push({ row, col: c });
-          console.log(`    📍 Added (${row},${c})`);
-        }
-        
-        // Create special candy
-        if (matchLength >= 5) {
-          const centerCol = Math.floor((col + endCol - 1) / 2);
-          specialCandies.push({ row, col: centerCol, type: 'color-bomb' });
-          console.log(`    💣 Color bomb at (${row},${centerCol})`);
-        } else if (matchLength === 4) {
-          const centerCol = Math.floor((col + endCol - 1) / 2);
-          specialCandies.push({ row, col: centerCol, type: 'striped-h' });
-          console.log(`    🍬 H-striped at (${row},${centerCol})`);
-        }
-        
-        // Skip past this match
-        col = endCol - 1;
-      }
-    }
-  }
-
-  // 🔍 VERTICAL MATCHES - DEAD SIMPLE
-  console.log('🔍 Checking vertical matches...');
-  for (let col = 0; col < gridSize; col++) {
-    for (let row = 0; row <= gridSize - 3; row++) {
-      const color1 = grid[row][col];
-      const color2 = grid[row + 1][col];
-      const color3 = grid[row + 2][col];
-      
-      // Simple check: are all 3 the same and not null?
-      if (color1 !== null && color1 === color2 && color2 === color3) {
-        console.log(`✅ VERTICAL: Col ${col}, Rows ${row}-${row+2}, Color ${color1}`);
-        
-        // Count total length of this match
-        let endRow = row + 3;
-        while (endRow < gridSize && grid[endRow][col] === color1) {
-          endRow++;
-        }
-        const matchLength = endRow - row;
-        
-        console.log(`  📏 Total length: ${matchLength}`);
-        
-        // Check if any of these cells are already matched horizontally
-        let hasConflict = false;
-        for (let r = row; r < endRow; r++) {
-          const existing = matches.find(m => m.row === r && m.col === col);
-          if (existing) {
-            console.log(`  ⚠️ Conflict at (${r},${col}) - already in horizontal match`);
-            hasConflict = true;
-            break;
-          }
-        }
-        
-        if (!hasConflict) {
-          // Add all cells in this match
-          for (let r = row; r < endRow; r++) {
-            matches.push({ row: r, col });
-            console.log(`    📍 Added (${r},${col})`);
-          }
-          
-          // Create special candy
-          if (matchLength >= 5) {
-            const centerRow = Math.floor((row + endRow - 1) / 2);
-            specialCandies.push({ row: centerRow, col, type: 'color-bomb' });
-            console.log(`    💣 Color bomb at (${centerRow},${col})`);
-          } else if (matchLength === 4) {
-            const centerRow = Math.floor((row + endRow - 1) / 2);
-            specialCandies.push({ row: centerRow, col, type: 'striped-v' });
-            console.log(`    🍬 V-striped at (${centerRow},${col})`);
-          }
-        }
-        
-        // Skip past this match
-        row = endRow - 1;
-      }
-    }
-  }
-
-  // 🔍 T/L SHAPES - SIMPLE CHECK
-  console.log('🔍 Checking T/L shapes...');
-  for (let row = 0; row < gridSize; row++) {
-    for (let col = 0; col < gridSize; col++) {
-      const centerColor = grid[row][col];
-      if (centerColor === null) continue;
-
-      // Check if this cell is part of both horizontal and vertical matches
-      const inHorizontal = matches.some(m => m.row === row && m.col === col);
-      const inVertical = matches.some(m => m.row === row && m.col === col);
-      
-      if (inHorizontal && inVertical) {
-        console.log(`🎁 T/L SHAPE at (${row},${col})`);
-        specialCandies.push({ row, col, type: 'wrapped' });
-      }
-    }
-  }
-
-  console.log(`🎯 DETECTION COMPLETE:`);
-  console.log(`  📊 Total matches: ${matches.length}`);
-  console.log(`  🍭 Special candies: ${specialCandies.length}`);
-  
-  // List all matches
-  matches.forEach((match, index) => {
-    const color = grid[match.row][match.col];
-    console.log(`    ${index + 1}: (${match.row},${match.col}) = ${color}`);
-  });
-
-  return { matches, specialCandies };
-}
 
 export function activateSpecialCandy(
   grid: (number | null)[][],
