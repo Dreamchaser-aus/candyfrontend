@@ -219,47 +219,33 @@ const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandi
 }, [forceCompleteGrid]);
   // SIMPLIFIED CASCADE SYSTEM
 const processCascade = useCallback(() => {
-  console.log('🌊 Starting animated cascade system...');
   setGameState(prev => ({ ...prev, animating: true, fallingCandies: [] }));
 
   const processStep = () => {
     setGameState(prev => {
       const { matches, specialCandies: newSpecialCandies } = findSpecialMatches(prev.grid, GAME_CONFIG.GRID_SIZE);
 
+      // 1. 没有消除，终止递归
       if (matches.length === 0) {
         setFallDistanceMap({});
-        setTimeout(() => {
-          setGameState(prev => {
-            const { matches: nextMatches } = findSpecialMatches(prev.grid, GAME_CONFIG.GRID_SIZE);
-            if (nextMatches.length > 0) {
-              processCascade();
-            }
-            return {
-              ...prev,
-              animating: false,
-              fallingCandies: []
-            };
-          });
-        }, 50);
         return {
           ...prev,
           animating: false,
           fallingCandies: []
         };
       }
-      // 标记待消除格
+
+      // 2. 动画处理阶段（和你原来一样）
       const tempGrid = prev.grid.map(row => [...row]);
       matches.forEach(match => {
         tempGrid[match.row][match.col] = null;
       });
-
-      // 计算掉落
       const fallMap = computeFallDistance(tempGrid);
       setFallDistanceMap(fallMap);
 
+      // 3. 动画结束后，再次检查是否还可消除
       setTimeout(() => {
         setFallDistanceMap({});
-
         setGameState(prev2 => {
           const newGrid = prev2.grid.map(row => [...row]);
           const newSpecialGrid = prev2.specialCandies.map(row => [...row]);
@@ -286,7 +272,7 @@ const processCascade = useCallback(() => {
           const { newGrid: filledGrid, newSpecialGrid: filledSpecialGrid } =
             applyGravityAndFill(newGrid, newSpecialGrid);
 
-          // **用 requestAnimationFrame 或 setTimeout 再递归一次 processStep**
+          // *** 递归再次调用 processStep ***
           setTimeout(processStep, 300);
 
           return {
@@ -297,14 +283,14 @@ const processCascade = useCallback(() => {
             fallingCandies: []
           };
         });
-      }, 300);
+      }, 300); // 动画时长
 
-      // 动画中只做视觉
+      // 只做动画，棋盘内容此时不动
       return prev;
     });
-  }
+  };
 
-  // 这里直接调用
+  // 调用入口
   processStep();
 }, [applyGravityAndFill, computeFallDistance]);
 
