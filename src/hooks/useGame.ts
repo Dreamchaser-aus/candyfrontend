@@ -282,7 +282,7 @@ const processCascade = useCallback(() => {
             applyGravityAndFill(newGrid, newSpecialGrid);
 
           // 连锁递归
-          setTimeout(processStep, 100); // 连锁消除间隔
+          setTimeout(processStep, 500); // 连锁消除间隔
 
           return {
             ...prev2,
