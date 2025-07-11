@@ -150,68 +150,66 @@ export function useGame() {
   }, []);
 
   // ENHANCED GRAVITY SYSTEM WITH IMMEDIATE FILL
-  const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandies: SpecialCandy[][]) => {
-    console.log('🌊 Applying enhanced gravity and immediate fill...');
-    
-    const newGrid = grid.map(row => [...row]);
-    const newSpecialGrid = specialCandies.map(row => [...row]);
-    
-    // Process each column
-    for (let col = 0; col < GAME_CONFIG.GRID_SIZE; col++) {
-      console.log(`🔄 Processing column ${col}...`);
-      
-      // Collect all existing candies from bottom to top
-      const existingCandies: Array<{
-        candy: number;
-        special: SpecialCandy;
-      }> = [];
+const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandies: SpecialCandy[][]) => {
+  console.log('🌊 Applying enhanced gravity and immediate fill...');
 
-      for (let row = GAME_CONFIG.GRID_SIZE - 1; row >= 0; row--) {
-        if (newGrid[row][col] !== null) {
-          existingCandies.push({
-            candy: newGrid[row][col]!,
-            special: newSpecialGrid[row][col]
-          });
-        }
+  const newGrid = grid.map(row => [...row]);
+  const newSpecialGrid = specialCandies.map(row => [...row]);
+
+  // Process each column
+  for (let col = 0; col < GAME_CONFIG.GRID_SIZE; col++) {
+    console.log(`🔄 Processing column ${col}...`);
+    // Collect all existing candies from bottom to top
+    const existingCandies: Array<{
+      candy: number;
+      special: SpecialCandy;
+    }> = [];
+
+    for (let row = GAME_CONFIG.GRID_SIZE - 1; row >= 0; row--) {
+      if (newGrid[row][col] !== null) {
+        existingCandies.push({
+          candy: newGrid[row][col]!,
+          special: newSpecialGrid[row][col]
+        });
       }
-
-      console.log(`  📦 Found ${existingCandies.length} existing candies in column ${col}`);
-
-      // Clear the entire column
-      for (let row = 0; row < GAME_CONFIG.GRID_SIZE; row++) {
-        newGrid[row][col] = null;
-      }
-
-      // Place existing candies at bottom
-      existingCandies.forEach((item, index) => {
-        const targetRow = GAME_CONFIG.GRID_SIZE - 1 - index;
-        newGrid[targetRow][col] = item.candy;
-        newSpecialGrid[targetRow][col] = item.special;
-        console.log(`  ⬇️ Placed existing candy at row ${targetRow}`);
-      });
-
-      // Fill remaining spaces with new candies
-      const emptySpaces = GAME_CONFIG.GRID_SIZE - existingCandies.length;
-      console.log(`  🆕 Filling ${emptySpaces} empty spaces in column ${col}`);
-      
-      for (let i = 0; i < emptySpaces; i++) {
-        const newColor = Math.floor(Math.random() * GAME_CONFIG.COLORS.length);
-        const targetRow = i;
-
-        if (newGrid[targetRow][col] === null) {
-          newGrid[targetRow][col] = newColor;
-        newSpecialGrid[targetRow][col] = { type: 'normal', color: newColor };
-        console.log(`  ✨ Filled row ${targetRow} with new candy (color ${newColor})`);
-       }
     }
 
-    // CRITICAL: Force complete any remaining empty spaces
-    const { newGrid: finalGrid, newSpecialGrid: finalSpecialGrid } = forceCompleteGrid(newGrid, newSpecialGrid);
+    console.log(`  📦 Found ${existingCandies.length} existing candies in column ${col}`);
 
-    console.log('🌊 Gravity and fill complete - grid is now 100% filled');
-    return { newGrid: finalGrid, newSpecialGrid: finalSpecialGrid };
-  }, [forceCompleteGrid]);
+    // Clear the entire column
+    for (let row = 0; row < GAME_CONFIG.GRID_SIZE; row++) {
+      newGrid[row][col] = null;
+    }
 
+    // Place existing candies at bottom
+    existingCandies.forEach((item, index) => {
+      const targetRow = GAME_CONFIG.GRID_SIZE - 1 - index;
+      newGrid[targetRow][col] = item.candy;
+      newSpecialGrid[targetRow][col] = item.special;
+      console.log(`  ⬇️ Placed existing candy at row ${targetRow}`);
+    });
+
+    // Fill remaining spaces with new candies
+    const emptySpaces = GAME_CONFIG.GRID_SIZE - existingCandies.length;
+    console.log(`  🆕 Filling ${emptySpaces} empty spaces in column ${col}`);
+
+    for (let i = 0; i < emptySpaces; i++) {
+      const newColor = Math.floor(Math.random() * GAME_CONFIG.COLORS.length);
+      const targetRow = i;
+      if (newGrid[targetRow][col] === null) {
+        newGrid[targetRow][col] = newColor;
+        newSpecialGrid[targetRow][col] = { type: 'normal', color: newColor };
+        console.log(`  ✨ Filled row ${targetRow} with new candy (color ${newColor})`);
+      }
+    }
+  } // <--- 这里把 for (let col = 0; ... ) { ... } 结束
+
+  // CRITICAL: Force complete any remaining empty spaces
+  const { newGrid: finalGrid, newSpecialGrid: finalSpecialGrid } = forceCompleteGrid(newGrid, newSpecialGrid);
+
+  console.log('🌊 Gravity and fill complete - grid is now 100% filled');
+  return { newGrid: finalGrid, newSpecialGrid: finalSpecialGrid };
+}, [forceCompleteGrid]);
   // SIMPLIFIED CASCADE SYSTEM
   const processCascade = useCallback(() => {
     console.log('🌊 Starting simplified cascade system...');
