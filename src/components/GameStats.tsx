@@ -5,34 +5,21 @@ interface GameStatsProps {
   highScore: number;
   timeLeft: number;
   movesLeft: number;
+  score: number;
 }
 
-export function GameStats({ highScore, timeLeft, movesLeft }: GameStatsProps) {
- 
-
+export function GameStats({ highScore, timeLeft, movesLeft, score }: GameStatsProps) {
   return (
     <div className="flex justify-between gap-4 mb-6">
-      {/* Last Score 移除 */}
-    {/*
+      {/* 当前分数 Points */}
       <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-3 rounded-2xl flex-1">
-        <Trophy className="text-yellow-400" size={20} />
+        <Award className="text-yellow-400" size={20} />
         <div className="text-white">
-          <div className="text-xs opacity-80">Last Score</div>
-          <div className="font-bold text-lg">{lastScore}</div>
+          <div className="text-xs opacity-80">Points</div>
+          <div className="font-bold text-lg">{score}</div>
         </div>
       </div>
-      
-
-      <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-3 rounded-2xl flex-1">
-        
-        <Award className="text-orange-300" size={20} />
-        <div className="text-white">
-          <div className="text-xs opacity-80">High Score</div>
-          <div className="font-bold text-lg">{highScore}</div>
-        </div>
-      </div>
-      */}
-      
+      {/* 时间 Time */}
       <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-3 rounded-2xl flex-1">
         <Clock className="text-blue-400" size={20} />
         <div className="text-white">
@@ -40,7 +27,7 @@ export function GameStats({ highScore, timeLeft, movesLeft }: GameStatsProps) {
           <div className="font-bold text-lg">{timeLeft}s</div>
         </div>
       </div>
-      
+      {/* 步数 Moves */}
       <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-3 rounded-2xl flex-1">
         <Zap className="text-green-400" size={20} />
         <div className="text-white">
