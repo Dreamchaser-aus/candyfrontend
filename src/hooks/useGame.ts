@@ -219,22 +219,34 @@ const applyGravityAndFill = useCallback((grid: (number | null)[][], specialCandi
 }, [forceCompleteGrid]);
   // SIMPLIFIED CASCADE SYSTEM
 const processCascade = useCallback(() => {
+  console.log('🌊 Starting animated cascade system...');
   setGameState(prev => ({ ...prev, animating: true, fallingCandies: [] }));
 
-  // 动画主流程
-  function processStep() {
+  const processStep = () => {
     setGameState(prev => {
       const { matches, specialCandies: newSpecialCandies } = findSpecialMatches(prev.grid, GAME_CONFIG.GRID_SIZE);
 
       if (matches.length === 0) {
         setFallDistanceMap({});
+        setTimeout(() => {
+          setGameState(prev => {
+            const { matches: nextMatches } = findSpecialMatches(prev.grid, GAME_CONFIG.GRID_SIZE);
+            if (nextMatches.length > 0) {
+              processCascade();
+            }
+            return {
+              ...prev,
+              animating: false,
+              fallingCandies: []
+            };
+          });
+        }, 50);
         return {
           ...prev,
           animating: false,
           fallingCandies: []
         };
       }
-
       // 标记待消除格
       const tempGrid = prev.grid.map(row => [...row]);
       matches.forEach(match => {
