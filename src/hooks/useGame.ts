@@ -4,6 +4,41 @@ import { GAME_CONFIG } from '../config/gameConfig';
 import { findSpecialMatches, removeInitialMatches, areAdjacent, cellsEqual, activateSpecialCandy } from '../utils/gameUtils';
 import { apiService } from '../services/api';
 
+
+/**
+ * 生成一个保证初始棋盘没有3连消的二维数组
+ * @param size 棋盘的边长（比如9就是9x9）
+ * @param colorCount 糖果颜色数量
+ */
+function generateInitialGrid(size: number, colorCount: number): number[][] {
+  const grid: number[][] = [];
+  for (let row = 0; row < size; row++) {
+    grid[row] = [];
+    for (let col = 0; col < size; col++) {
+      let color: number;
+      let tryCount = 0;
+      do {
+        color = Math.floor(Math.random() * colorCount);
+        tryCount++;
+      } while (
+        (
+          col >= 2 &&
+          color === grid[row][col - 1] &&
+          color === grid[row][col - 2]
+        ) ||
+        (
+          row >= 2 &&
+          color === grid[row - 1][col] &&
+          color === grid[row - 2][col]
+        )
+        && tryCount < 100
+      );
+      grid[row][col] = color;
+    }
+  }
+  return grid;
+}
+
 export function useGame() {
   const [gameState, setGameState] = useState<GameState>({
     grid: [],
